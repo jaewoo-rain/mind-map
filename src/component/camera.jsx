@@ -1,61 +1,123 @@
 import React, { useEffect, useRef, useState } from "react";
 
-/**
- * React Camera Capture (Web)
- * - HTTPS or localhost에서 동작합니다.
- * - 모바일: "환경(후면)"/"사용자(전면)" 카메라 전환 지원 (가능한 경우)
- * - 사진 캡처 → Blob/다운로드/미리보기
- * - 카메라 권한 거부/미지원 시 <input type="file" accept="image/*" capture> 폴백 제공
- */
-export default function CameraCapture() {
+export default function CameraCaptureMobile() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const fileInputRef = useRef(null);
+
   const [stream, setStream] = useState(null);
-  const [facingMode, setFacingMode] = useState("environment"); // 'user' | 'environment'
+  const [facingMode, setFacingMode] = useState("environment"); // "user" | "environment"
   const [photoUrl, setPhotoUrl] = useState(null);
   const [error, setError] = useState("");
   const [isStarting, setIsStarting] = useState(false);
 
-  // ===== Helpers =====
+  // ---- helpers ----
+  const clearVideo = () => {
+    const v = videoRef.current;
+    if (v) {
+      v.pause?.();
+      v.srcObject = null; // iOS Safari 전환 안정화에 중요
+      v.removeAttribute("src");
+    }
+  };
+
   const stopStream = () => {
     if (stream) {
       stream.getTracks().forEach((t) => t.stop());
       setStream(null);
     }
+    clearVideo();
   };
 
+  // 사용 가능한 비디오 입력 목록
+  const listVideoInputs = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      return devices.filter((d) => d.kind === "videoinput");
+    } catch {
+      return [];
+    }
+  };
+
+  // 전면/후면에 맞는 deviceId 찾기
+  const pickDeviceIdForFacing = async (mode) => {
+    const videos = await listVideoInputs();
+    if (!videos.length) return null;
+
+    // 레이블 기반 휴리스틱
+    const wantFront = mode === "user";
+    const match = (label) => {
+      const l = (label || "").toLowerCase();
+      return wantFront
+        ? l.includes("front") || l.includes("user")
+        : l.includes("back") || l.includes("rear") || l.includes("environment");
+    };
+
+    // 1) 라벨로 확실히 구분되는 것 우선
+    const byLabel = videos.find((d) => match(d.label));
+    if (byLabel) return byLabel.deviceId;
+
+    // 2) 구분 불가하면: 기기별로 보통 0/1이 앞/뒤 중 하나
+    //    전면 요청이면 마지막, 후면이면 첫 번째를 가정(경험적)
+    return wantFront ? videos[videos.length - 1].deviceId : videos[0].deviceId;
+  };
+
+  // 카메라 시작(다중 폴백)
   const startCamera = async (mode = facingMode) => {
     setError("");
     setIsStarting(true);
-    setPhotoUrl(null);
     try {
-      // 권장: ideal 사용 (일부 브라우저에서 exact는 실패 가능)
-      const constraints = {
-        audio: false,
-        video: {
-          facingMode: { ideal: mode },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      };
-
-      // Safari iOS 등 호환을 위해 실패 시 일반 요청으로 폴백
-      let s = await navigator.mediaDevices.getUserMedia(constraints);
-      if (!s)
-        s = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: false,
-        });
-
+      // 먼저 기존 스트림/비디오 정리
       stopStream();
-      setStream(s);
 
-      const v = videoRef.current;
-      if (v) {
-        v.srcObject = s;
-        v.setAttribute("playsinline", "true"); // iOS Safari에서 전체화면 방지
-        await v.play();
+      // 1) exact 시도
+      try {
+        const s1 = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { exact: mode },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+        });
+        await attachStream(s1);
+        return;
+      } catch (e) {
+        // 계속 진행 (무시)
       }
+
+      // 2) 문자열 형태 시도
+      try {
+        const s2 = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: mode,
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+        });
+        await attachStream(s2);
+        return;
+      } catch (e) {
+        // 계속 진행
+      }
+
+      // 3) deviceId 직접 선택
+      const deviceId = await pickDeviceIdForFacing(mode);
+      if (deviceId) {
+        const s3 = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            deviceId: { exact: deviceId },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+        });
+        await attachStream(s3);
+        return;
+      }
+
+      throw new Error("적합한 카메라를 찾을 수 없습니다.");
     } catch (e) {
       console.error(e);
       setError(
@@ -66,10 +128,20 @@ export default function CameraCapture() {
     }
   };
 
+  const attachStream = async (s) => {
+    setStream(s);
+    const v = videoRef.current;
+    if (v) {
+      v.srcObject = s;
+      v.setAttribute("playsinline", "true"); // iOS 전체화면 방지
+      v.muted = true;
+      await v.play();
+    }
+  };
+
   const switchCamera = async () => {
     const next = facingMode === "environment" ? "user" : "environment";
     setFacingMode(next);
-    stopStream();
     await startCamera(next);
   };
 
@@ -77,17 +149,18 @@ export default function CameraCapture() {
     const v = videoRef.current;
     const c = canvasRef.current;
     if (!v || !c) return;
+
     const w = v.videoWidth || 1280;
     const h = v.videoHeight || 720;
     c.width = w;
     c.height = h;
     const ctx = c.getContext("2d");
+    if (!ctx) return;
     ctx.drawImage(v, 0, 0, w, h);
     c.toBlob(
       (blob) => {
         if (!blob) return;
         const url = URL.createObjectURL(blob);
-        // 기존 URL 정리
         if (photoUrl) URL.revokeObjectURL(photoUrl);
         setPhotoUrl(url);
       },
@@ -96,18 +169,10 @@ export default function CameraCapture() {
     );
   };
 
-  const downloadPhoto = () => {
-    if (!photoUrl) return;
-    const a = document.createElement("a");
-    a.href = photoUrl;
-    a.download = `photo_${Date.now()}.jpg`;
-    a.click();
-  };
-
-  const onFileFallback = (e) => {
+  const onChooseFromAlbum = () => fileInputRef.current?.click();
+  const onAlbumChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    // 파일 선택 시 미리보기
     const url = URL.createObjectURL(file);
     if (photoUrl) URL.revokeObjectURL(photoUrl);
     setPhotoUrl(url);
@@ -116,14 +181,11 @@ export default function CameraCapture() {
   useEffect(() => {
     if (!("mediaDevices" in navigator)) {
       setError(
-        "이 브라우저는 카메라 API를 지원하지 않습니다. 파일 업로드 폴백을 사용하세요."
+        "이 브라우저는 카메라 API를 지원하지 않습니다. 앨범에서 선택하세요."
       );
       return;
     }
-    // 자동 시작을 원하면 주석 해제
     startCamera().catch(() => {});
-
-    // 언마운트 시 정리
     return () => {
       stopStream();
       if (photoUrl) URL.revokeObjectURL(photoUrl);
@@ -131,145 +193,189 @@ export default function CameraCapture() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ====== 아래는 UI (이전과 동일) ======
+  const wrap = {
+    width: "100%",
+    maxWidth: 430,
+    margin: "0 auto",
+    padding: "12px 12px 24px",
+    background: "#000",
+    color: "#fff",
+    minHeight: "100vh",
+    boxSizing: "border-box",
+  };
+  const frame = {
+    width: "100%",
+    aspectRatio: "1 / 1",
+    background: "#111",
+    borderRadius: 28,
+    border: "4px solid #3b82f6",
+    overflow: "hidden",
+    marginTop: 8,
+    position: "relative",
+  };
+  const videoStyle = {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    display: "block",
+  };
+  const controls = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "18px 24px 8px",
+  };
+  const iconBtn = {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    background: "transparent",
+    display: "grid",
+    placeItems: "center",
+    border: "1px solid rgba(255,255,255,0.18)",
+    cursor: "pointer",
+  };
+  const shutterWrap = {
+    position: "relative",
+    width: 86,
+    height: 86,
+    borderRadius: "50%",
+    display: "grid",
+    placeItems: "center",
+    border: "4px solid #fbbf24",
+    boxShadow: "0 0 0 2px rgba(0,0,0,0.5) inset",
+    cursor: "pointer",
+  };
+  const shutterCore = {
+    width: 68,
+    height: 68,
+    borderRadius: "50%",
+    background: "#fff",
+  };
+  const previewOverlay = { position: "absolute", inset: 0, background: "#000" };
+  const clearBtn = {
+    position: "absolute",
+    right: 8,
+    bottom: 8,
+    background: "rgba(0,0,0,0.55)",
+    border: "1px solid rgba(255,255,255,0.25)",
+    color: "#fff",
+    padding: "6px 10px",
+    borderRadius: 10,
+    fontSize: 12,
+    cursor: "pointer",
+  };
+
   return (
-    <div style={{ maxWidth: 900, margin: "24px auto", padding: 16 }}>
-      <h1 style={{ fontSize: 24, marginBottom: 12 }}>React Camera Capture</h1>
+    <div style={wrap}>
+      <h2 style={{ fontSize: 18, fontWeight: 600, margin: "4px 2px 6px" }}>
+        React Camera
+      </h2>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        {/* Left: Live Preview */}
-        <div
-          style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 12 }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 8,
-            }}
-          >
-            <button onClick={() => startCamera()} disabled={isStarting}>
-              {isStarting ? "시작 중..." : "카메라 시작"}
-            </button>
-            <button onClick={switchCamera} disabled={!stream}>
-              카메라 전환 (
-              {facingMode === "environment" ? "후면→전면" : "전면→후면"})
-            </button>
-            <button onClick={stopStream} disabled={!stream}>
-              정지
-            </button>
-            <button onClick={capturePhoto} disabled={!stream}>
-              📸 사진 찍기
-            </button>
-          </div>
-
-          <div
-            style={{
-              position: "relative",
-              width: "100%",
-              aspectRatio: "16 / 9",
-              background: "#111",
-            }}
-          >
-            <video
-              ref={videoRef}
-              muted
+      <div style={frame}>
+        <video ref={videoRef} muted autoPlay playsInline style={videoStyle} />
+        {photoUrl && (
+          <>
+            <img
+              src={photoUrl}
+              alt="captured"
               style={{
+                ...previewOverlay,
+                objectFit: "cover",
                 width: "100%",
                 height: "100%",
-                objectFit: "cover",
-                borderRadius: 8,
               }}
-              autoPlay
             />
-          </div>
-
-          {error && <p style={{ color: "#b91c1c", marginTop: 8 }}>{error}</p>}
-
-          {/* Fallback: 파일 업로드 (모바일 카메라 호출 가능) */}
-          <div style={{ marginTop: 10, fontSize: 14, color: "#374151" }}>
-            카메라가 되지 않나요?
-            <label
-              style={{ marginLeft: 8, cursor: "pointer", color: "#2563eb" }}
-            >
-              파일에서 선택
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={onFileFallback}
-                style={{ display: "none" }}
-              />
-            </label>
-          </div>
-        </div>
-
-        {/* Right: Snapshot Preview */}
-        <div
-          style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 12 }}
-        >
-          <h3 style={{ marginBottom: 8 }}>Snapshot</h3>
-          <div
-            style={{
-              width: "100%",
-              aspectRatio: "16 / 9",
-              background: "#111",
-              borderRadius: 8,
-              overflow: "hidden",
-            }}
-          >
-            {photoUrl ? (
-              <img
-                src={photoUrl}
-                alt="snapshot"
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
-            ) : (
-              <div
-                style={{
-                  color: "#9ca3af",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  height: "100%",
-                }}
-              >
-                캡처된 이미지가 여기에 표시됩니다.
-              </div>
-            )}
-          </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            <button onClick={downloadPhoto} disabled={!photoUrl}>
-              다운로드
+            <button style={clearBtn} onClick={() => setPhotoUrl(null)}>
+              미리보기 닫기
             </button>
-            <button onClick={() => setPhotoUrl(null)} disabled={!photoUrl}>
-              삭제
-            </button>
-          </div>
-
-          {/* 숨김 캔버스 - 실제 캡처 처리에 사용 */}
-          <canvas ref={canvasRef} style={{ display: "none" }} />
-        </div>
+          </>
+        )}
       </div>
 
-      <ul style={{ marginTop: 16, color: "#374151", lineHeight: 1.6 }}>
-        <li>
-          ⚠️ <b>HTTPS</b> 또는 <b>localhost</b>에서만 카메라 접근이 허용됩니다.
-        </li>
-        <li>
-          📱 iOS Safari에서는 <code>playsInline</code> 속성이 있어야 전체
-          화면으로 전환되지 않습니다.
-        </li>
-        <li>
-          🔁 일부 기기에서 전·후면 전환이 제한될 수 있습니다(브라우저/기기
-          정책).
-        </li>
-        <li>
-          🖼️ 더 높은 해상도를 원하면 <code>video.width/height ideal</code>을
-          조정하세요. 실제 저장 해상도는 <code>video.videoWidth/Height</code>로
-          결정됩니다.
-        </li>
-      </ul>
+      <div style={controls}>
+        <button
+          style={iconBtn}
+          onClick={onChooseFromAlbum}
+          title="앨범에서 선택"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <rect
+              x="3"
+              y="5"
+              width="18"
+              height="14"
+              rx="2"
+              stroke="white"
+              strokeWidth="1.6"
+            />
+            <circle cx="9" cy="10" r="2.2" stroke="white" strokeWidth="1.6" />
+            <path
+              d="M5 17l4.5-4.5L14 17l3-3 2 3"
+              stroke="white"
+              strokeWidth="1.6"
+              fill="none"
+            />
+          </svg>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={onAlbumChange}
+            style={{ display: "none" }}
+          />
+        </button>
+
+        <div style={shutterWrap} onClick={capturePhoto} title="사진 찍기">
+          <div style={shutterCore} />
+        </div>
+
+        <button
+          style={iconBtn}
+          onClick={switchCamera}
+          disabled={isStarting}
+          title={
+            facingMode === "environment" ? "전면 카메라로" : "후면 카메라로"
+          }
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M7 7h7a5 5 0 0 1 5 5v1"
+              stroke="white"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+            />
+            <path
+              d="M6 10l1.5-3L11 8.5"
+              stroke="white"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              fill="none"
+            />
+            <path
+              d="M17 17H10a5 5 0 0 1-5-5v-1"
+              stroke="white"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+            />
+            <path
+              d="M18 14l-1.5 3L13 15.5"
+              stroke="white"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              fill="none"
+            />
+          </svg>
+        </button>
+      </div>
+
+      {error && (
+        <div style={{ marginTop: 10, color: "#fca5a5", fontSize: 14 }}>
+          {error}
+        </div>
+      )}
+      <canvas ref={canvasRef} style={{ display: "none" }} />
     </div>
   );
 }
