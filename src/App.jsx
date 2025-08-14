@@ -3,7 +3,7 @@ import { Routes, Route, useNavigate, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import CameraCapture from "./page/CameraPage";
 import MapPage from "./page/MapPage";
-import GpsPage from "./page/GPSPage";
+import GpsPage from "./page/GpsPage";
 import NotificationsPage from "./page/NotificationsPage";
 
 // 홈: 2x2 버튼 그리드
