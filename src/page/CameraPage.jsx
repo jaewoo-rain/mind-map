@@ -182,6 +182,7 @@ export default function CameraCaptureMobile() {
     position: "relative",
     background: "black",
     overflow: "hidden",
+    margin: "20px auto",
   };
   const viewportWrap = {
     width: 360,
