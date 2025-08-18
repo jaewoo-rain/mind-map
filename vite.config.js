@@ -5,7 +5,8 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // 터널 도메인을 환경변수로 넣어두면 매번 하드코딩 안 해도 됩니다.
 const TUNNEL_HOST =
-  process.env.CF_TUNNEL_HOST || "eq-passport-wake-subsection.trycloudflare.com";
+  process.env.CF_TUNNEL_HOST ||
+  "pittsburgh-advocacy-switch-plus.trycloudflare.com";
 
 export default defineConfig({
   plugins: [
