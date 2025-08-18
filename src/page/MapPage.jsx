@@ -1,21 +1,23 @@
+// src/MapPage.jsx
 import React, { useEffect, useRef, useState } from "react";
 import "./MapPage.css";
 
-// 지도 JS 로더용 공개 키 (브라우저에 노출 OK)
+// 네이버 지도 JS 로더용 공개 키 (ncpKeyId 또는 ncpClientId)
 const NAVER_KEY = import.meta.env.VITE_NAVER_MAPS_CLIENT_ID;
 
-// 출발/도착 (광화문 → 청계천 예시)
-const ORIGIN = { lat: 33.516195, lng: 126.530346 };
-const DEST = { lat: 33.517944, lng: 126.545886 };
+// 예시: 광화문 → 청계천
+const ORIGIN = { lat: 37.5759, lng: 126.9768 };
+const DEST = { lat: 37.5692, lng: 126.9778 };
 
-/** 네이버 지도 스크립트 로더 */
+/** 네이버 지도 스크립트 동적 로더 */
 function loadNaverMaps(clientId) {
   return new Promise((resolve, reject) => {
     if (typeof window !== "undefined" && window.naver?.maps) {
       resolve(window.naver);
       return;
     }
-    const existing = document.getElementById("naver-maps-script");
+    const id = "naver-maps-script";
+    const existing = document.getElementById(id);
     if (existing) {
       existing.addEventListener("load", () => resolve(window.naver), {
         once: true,
@@ -24,8 +26,7 @@ function loadNaverMaps(clientId) {
       return;
     }
     const s = document.createElement("script");
-    s.id = "naver-maps-script";
-    // ✅ 최근 로더 파라미터: ncpKeyId (ncpClientId도 동작)
+    s.id = id;
     s.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}`;
     s.async = true;
     s.defer = true;
@@ -66,15 +67,15 @@ export default function MapPage() {
 
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
-  const polylineRef = useRef(null);
+  const routeLineRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    const initMap = async () => {
+    const init = async () => {
       try {
         if (!NAVER_KEY) {
-          setMapErr("VITE_NAVER_MAPS_CLIENT_ID가 없습니다. .env를 확인하세요.");
+          setMapErr("VITE_NAVER_MAPS_CLIENT_ID(.env)이 없습니다.");
           return;
         }
         const naver = await loadNaverMaps(NAVER_KEY);
@@ -93,28 +94,32 @@ export default function MapPage() {
         new naver.maps.Marker({ position: originLL, map, title: "출발" });
         new naver.maps.Marker({ position: destLL, map, title: "도착" });
 
-        // ✅ Directions 15 경로 요청 — 로컬 서버 라우트 사용
-        const pathLngLat = await fetchRoute15({
-          start: { lng: ORIGIN.lng, lat: ORIGIN.lat }, // "lng,lat"
-          goal: { lng: DEST.lng, lat: DEST.lat },
-          option: "fast", // fast | shortest | traffics | free ...
+        // 🔌 티맵 보행자 경로 요청(서버 프록시)
+        const pathLngLat = await fetchTmapPedestrian({
+          startLng: ORIGIN.lng,
+          startLat: ORIGIN.lat,
+          goalLng: DEST.lng,
+          goalLat: DEST.lat,
         });
+
         if (cancelled) return;
 
         if (Array.isArray(pathLngLat) && pathLngLat.length > 1) {
           const latlngs = pathLngLat.map(
             ([lng, lat]) => new naver.maps.LatLng(lat, lng)
           );
+          // 기존 라인 제거
+          if (routeLineRef.current) routeLineRef.current.setMap(null);
 
-          if (polylineRef.current) polylineRef.current.setMap(null);
-          polylineRef.current = new naver.maps.Polyline({
+          routeLineRef.current = new naver.maps.Polyline({
             path: latlngs,
-            strokeColor: "#FF8C42",
-            strokeOpacity: 1.0,
-            strokeWeight: 8,
+            strokeColor: "#0064FF",
+            strokeOpacity: 0.9,
+            strokeWeight: 7,
             map,
           });
 
+          // 화면 맞추기
           const bounds = latlngs.reduce(
             (b, ll) => (b.extend(ll), b),
             new naver.maps.LatLngBounds(latlngs[0], latlngs[0])
@@ -125,68 +130,58 @@ export default function MapPage() {
           new naver.maps.Polyline({
             path: [originLL, destLL],
             strokeColor: "#999",
-            strokeOpacity: 0.8,
+            strokeOpacity: 0.7,
             strokeWeight: 6,
             map,
           });
-          setMapErr("길찾기 경로를 불러오지 못해 직선을 표시했어요.");
+          setMapErr("보행자 경로를 불러오지 못해 직선을 표시했어요.");
         }
       } catch (e) {
-        console.error("initMap Error:", e);
-        setMapErr(`지도 초기화 오류: ${e.message || e}`);
+        console.error(e);
+        setMapErr(`지도 초기화 실패: ${e.message || e}`);
       }
     };
 
-    initMap();
+    init();
     return () => {
       cancelled = true;
-      if (polylineRef.current) {
-        polylineRef.current.setMap(null);
-        polylineRef.current = null;
+      if (routeLineRef.current) {
+        routeLineRef.current.setMap(null);
+        routeLineRef.current = null;
       }
       mapRef.current = null;
     };
   }, []);
 
-  /** 로컬 서버 프록시로 Directions 15 호출 (/api/directions15) */
-  async function fetchRoute15({ start, goal, option = "fast" }) {
+  async function fetchTmapPedestrian({ startLng, startLat, goalLng, goalLat }) {
     try {
       const qs = new URLSearchParams({
-        startLng: String(start.lng),
-        startLat: String(start.lat),
-        goalLng: String(goal.lng),
-        goalLat: String(goal.lat),
-        option,
+        startLng: String(startLng),
+        startLat: String(startLat),
+        goalLng: String(goalLng),
+        goalLat: String(goalLat),
+        searchOption: "0",
       });
-      const res = await fetch(`/api/directions15?${qs.toString()}`);
-      const data = await res.json();
-
-      if (!res.ok) {
-        console.error("[dir15] HTTP", res.status, data);
-        setMapErr(
-          `길찾기 오류(${res.status}): ${data?.message || "서버 오류"}`
-        );
-        return null;
-      }
-
-      if (!data?.ok || !Array.isArray(data?.path)) {
-        console.warn("[dir15] no path in response", data);
-        setMapErr("길찾기 응답에 경로가 없습니다.");
-        return null;
-      }
+      // 서버를 따로 돌린다면 절대경로로 호출해도 됩니다: http://localhost:4000/api/tmap/pedestrian
+      const r = await fetch(
+        `http://localhost:4000/api/tmap/pedestrian?${qs.toString()}`
+      );
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+      if (!data?.ok || !Array.isArray(data?.path)) return null;
       return data.path; // [[lng,lat], ...]
     } catch (e) {
-      console.error("[dir15] fetch error", e);
-      setMapErr("길찾기(15) 경로 요청 실패");
+      console.error(e);
+      setMapErr("티맵 보행자 경로 요청 실패");
       return null;
     }
   }
 
-  // --- 이벤트 핸들러 ---
+  // --- 버튼 핸들러 ---
   const goMyLocation = () => {
     setMapErr("");
     if (!mapRef.current || !window.naver?.maps) {
-      setMapErr("지도가 준비되지 않았습니다. 잠시 후 다시 시도해주세요.");
+      setMapErr("지도가 아직 준비되지 않았어요.");
       return;
     }
     if (!navigator.geolocation) {
@@ -206,13 +201,6 @@ export default function MapPage() {
       { enableHighAccuracy: true }
     );
   };
-
-  const handleStopClick = () => setIsStopModalOpen(true);
-  const handleConfirmStop = () => {
-    console.log("운동 종료!");
-    setIsStopModalOpen(false);
-  };
-  const handleCancelStop = () => setIsStopModalOpen(false);
 
   return (
     <div className="screen">
@@ -251,7 +239,10 @@ export default function MapPage() {
           <button className="btn btn-location" onClick={goMyLocation}>
             📍 내 위치
           </button>
-          <button className="btn btn-stop" onClick={handleStopClick}>
+          <button
+            className="btn btn-stop"
+            onClick={() => setIsStopModalOpen(true)}
+          >
             종료
           </button>
           <button className="btn btn-pause">멈추기</button>
@@ -259,16 +250,11 @@ export default function MapPage() {
       </div>
 
       {isStopModalOpen && (
-        <StopConfirmStopModal
-          onConfirm={handleConfirmStop}
-          onCancel={handleCancelStop}
+        <StopConfirmModal
+          onConfirm={() => setIsStopModalOpen(false)}
+          onCancel={() => setIsStopModalOpen(false)}
         />
       )}
     </div>
   );
-}
-
-// 타이포 방지용: 모달 컴포넌트 이름 재수출
-function StopConfirmStopModal(props) {
-  return <StopConfirmModal {...props} />;
 }
