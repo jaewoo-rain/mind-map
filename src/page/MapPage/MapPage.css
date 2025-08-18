@@ -1,0 +1,177 @@
+/* --- 기본 화면 및 지도 컨테이너 --- */
+.screen {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.map-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* --- 하단 정보 패널 --- */
+.stats-panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: white;
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  padding: 20px 24px 30px;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 14px;
+  text-align: center;
+  padding: 8px;
+  background-color: #fee2e2;
+  border-radius: 8px;
+}
+
+/* --- 운동 정보 그리드 --- */
+.stats-grid {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-around;
+  align-items: stretch;
+}
+
+.stat-item {
+  flex: 1;
+  text-align: center;
+  padding: 16px 8px;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #111827;
+}
+
+.divider.horizontal {
+  width: 100%;
+  height: 1px;
+  background-color: #e5e7eb;
+}
+
+.divider.vertical {
+  width: 1px;
+  background-color: #e5e7eb;
+}
+
+/* --- 컨트롤 버튼 --- */
+.controls {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.btn {
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-location {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.btn-stop {
+  background-color: #dc2626;
+  color: white;
+  padding: 18px; /* 더 크게 */
+  font-size: 18px;
+}
+
+.btn-pause {
+  background-color: #4f46e5;
+  color: white;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+/* --- 종료 확인 모달 --- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 32px 24px;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 350px;
+  text-align: center;
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: bold;
+  margin: 0 0 24px;
+  color: #1f2937;
+}
+
+.modal-title .highlight {
+  color: #ef4444;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.modal-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.modal-btn.cancel {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+.modal-btn.confirm {
+  background-color: #ef4444;
+  color: white;
+}
