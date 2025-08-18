@@ -5,6 +5,7 @@ import CameraCapture from "./page/CameraPage";
 import MapPage from "./page/MapPage";
 import GpsPage from "./page/GpsPage";
 import NotificationsPage from "./page/NotificationsPage";
+import RecommendedCourse from "./page/RecommendedCourse";
 
 // 홈: 2x2 버튼 그리드
 function Home() {
@@ -27,6 +28,13 @@ function Home() {
               🗺️
             </span>
             지도
+          </button>
+
+          <button className="btn" onClick={() => navigate("/recommend")}>
+            <span className="btn-emoji" aria-hidden>
+              📍
+            </span>
+            경로추천
           </button>
 
           <button className="btn" onClick={() => navigate("/notifications")}>
@@ -54,6 +62,7 @@ export default function App() {
       <Route path="/" element={<Home />} />
       <Route path="/camera" element={<CameraCapture />} />
       <Route path="/map" element={<MapPage />} />
+      <Route path="/recommend" element={<RecommendedCourse />} />
       <Route path="/notifications" element={<NotificationsPage />} />
       <Route path="/gps" element={<GpsPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
