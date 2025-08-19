@@ -1,7 +1,7 @@
 // src/OnboardingFlow.jsx
 import React, { useMemo, useState } from "react";
 
-import NicknamePage from "./InputInfoPage.jsx";
+import InputInfoPage from "./InputInfoPage.jsx";
 import GenderAgePage from "./GenderAgePage";
 import TravelPreferencePage from "./TravelPreferencePage";
 import RegionSelectPage from "./RegionSelectPage";
@@ -112,7 +112,7 @@ export default function OnboardingFlow() {
 
       {/* 각 스텝 렌더링 */}
       {step === 0 && (
-        <NicknamePage
+        <InputInfoPage
           defaultNickname={profile.nickname}
           onNext={handleFromNickname}
         />
