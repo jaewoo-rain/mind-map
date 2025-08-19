@@ -1,15 +1,11 @@
-// src/components/CameraCaptureMobile.jsx
 import React, { useEffect, useRef, useState } from "react";
 
-/**
- * 촬영 → 미리보기 → 문구입력 → 전송 → 다음(onNext) 흐름
- */
 export default function CameraCaptureMobile({
   nickname = "러너닉네임",
   locationName = "함덕해수욕장",
-  initialFacing = "environment", // "user" | "environment"
-  onComplete, // (payload) => void
-  onNext, // (payload) => void
+  initialFacing = "environment",
+  onComplete,
+  onNext,
 }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -104,7 +100,7 @@ export default function CameraCaptureMobile({
         await attachStream(s2);
         return;
       } catch {}
-      // 3) deviceId
+      // 3) deviceId fallback
       const deviceId = await pickDeviceIdForFacing(mode);
       if (deviceId) {
         const s3 = await navigator.mediaDevices.getUserMedia({
@@ -162,7 +158,7 @@ export default function CameraCaptureMobile({
       author: nickname,
       timeAgo: "방금",
       photoBlob,
-      photoUrl, // 업로드 후엔 서버 URL로 교체
+      photoUrl,
       caption: message,
       facingMode,
       createdAt: new Date().toISOString(),
@@ -183,8 +179,7 @@ export default function CameraCaptureMobile({
       createdAt: new Date().toISOString(),
       locationName,
     };
-    if (onNext) onNext(payload);
-    // onNext 미지정이면 아무것도 안함(초기화 방지)
+    onNext?.(payload);
   };
 
   const resetAll = () => {
@@ -209,21 +204,21 @@ export default function CameraCaptureMobile({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ===== Styles =====
+  // ===== Styles (반응형) =====
   const root = {
-    width: 360,
-    height: 800,
-    position: "relative",
+    position: "fixed",
+    inset: 0,
+    width: "100vw",
+    height: "100dvh", // 모바일 주소창 수축/확장 대응
     background: "black",
     overflow: "hidden",
-    margin: "20px auto",
   };
   const statusBar = {
-    width: 360,
-    height: 44,
     position: "absolute",
     left: 0,
     top: 0,
+    width: "100%",
+    height: 44,
     background: "black",
     color: "white",
     display: "flex",
@@ -234,13 +229,12 @@ export default function CameraCaptureMobile({
     zIndex: 5,
   };
   const homeIndicator = {
+    position: "absolute",
+    bottom: 8,
+    left: "50%",
+    transform: "translateX(-50%)",
     width: 129,
     height: 4.5,
-    left: 244.5,
-    top: 776,
-    position: "absolute",
-    transform: "rotate(180deg)",
-    transformOrigin: "top left",
     background: "white",
     borderRadius: 90,
   };
@@ -269,12 +263,13 @@ export default function CameraCaptureMobile({
       />
     </div>
   );
+
   const viewportWrap = {
-    width: 360,
-    height: 640,
-    left: 0,
-    top: 57,
     position: "absolute",
+    left: 0,
+    right: 0,
+    top: 57,
+    bottom: 120, // 하단 버튼 영역 확보
     overflow: "hidden",
     borderRadius: 40,
     background: "#000",
@@ -301,24 +296,26 @@ export default function CameraCaptureMobile({
     userSelect: "none",
   };
   const shutterRing = {
+    position: "absolute",
+    bottom: 28,
+    left: "50%",
+    transform: "translateX(-50%)",
     width: 82,
     height: 82,
-    left: 139,
-    top: 660,
-    position: "absolute",
-    borderRadius: 100,
+    borderRadius: 999,
     border: "5px solid #FF8C42",
     background: "white",
     cursor: "pointer",
   };
   const orangeFab = {
+    position: "absolute",
+    bottom: 28,
+    left: "50%",
+    transform: "translateX(-50%)",
     width: 82,
     height: 82,
-    left: 139,
-    top: 660,
-    position: "absolute",
     background: "#FF8C42",
-    borderRadius: 100,
+    borderRadius: 999,
     cursor: "pointer",
     display: "grid",
     placeItems: "center",
@@ -328,7 +325,7 @@ export default function CameraCaptureMobile({
     position: "absolute",
     left: "50%",
     transform: "translateX(-50%)",
-    bottom: 80,
+    bottom: 120,
     background: "rgba(255,255,255,0.85)",
     boxShadow: "0px 1px 4px rgba(12,12,13,0.05)",
     borderRadius: 12,
@@ -428,8 +425,8 @@ export default function CameraCaptureMobile({
             style={{
               position: "absolute",
               left: "50%",
-              transform: "translateX(-50%))",
-              bottom: 80,
+              transform: "translateX(-50%)", // ✅ 오타 수정
+              bottom: 120,
               background: "rgba(255,255,255,0.85)",
               color: "#111",
               padding: "8px 14px",
@@ -449,7 +446,7 @@ export default function CameraCaptureMobile({
               position: "absolute",
               left: 16,
               right: 16,
-              bottom: 80,
+              bottom: 120,
               background: "rgba(255,255,255,0.9)",
               borderRadius: 16,
               padding: 10,
@@ -497,7 +494,7 @@ export default function CameraCaptureMobile({
               position: "absolute",
               left: "50%",
               transform: "translateX(-50%)",
-              bottom: 44,
+              bottom: 120,
               padding: "10px 14px",
               background: "rgba(255,255,255,0.30)",
               borderRadius: 20,

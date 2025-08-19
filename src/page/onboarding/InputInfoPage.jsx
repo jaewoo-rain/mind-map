@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export default function NicknamePage({ defaultNickname = "", onNext }) {
+export default function InputInfoPage({ defaultNickname = "", onNext }) {
   const [nickname, setNickname] = useState(defaultNickname);
   const canProceed = nickname.trim().length > 0;
 
