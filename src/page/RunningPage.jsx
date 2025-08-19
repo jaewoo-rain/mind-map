@@ -103,13 +103,16 @@ export default function RunningPage() {
             currentLocation.latitude,
             currentLocation.longitude
         );
-        const newTotalDistance = distance + newDistance;
-        setDistance(newTotalDistance);
-        setCalories(newTotalDistance * 65); // Assuming average weight of 65kg
 
-        if (newTotalDistance > 0) {
-            const paceInMinutes = (elapsedTime / 60) / newTotalDistance;
-            setPace(paceInMinutes);
+        if (newDistance > 0) {
+            const newTotalDistance = distance + newDistance;
+            setDistance(newTotalDistance);
+            setCalories(newTotalDistance * 65); // Assuming average weight of 65kg
+
+            if (newTotalDistance > 0) {
+                const paceInMinutes = (elapsedTime / 60) / newTotalDistance;
+                setPace(paceInMinutes);
+            }
         }
     }
     setPrevLocation(currentLocation);
