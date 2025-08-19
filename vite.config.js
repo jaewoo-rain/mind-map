@@ -110,7 +110,7 @@ export default defineConfig(({ mode }) => {
       // ✅ 프런트의 /api → 로컬 Express 서버로 전달
       proxy: {
         "/api": {
-          target: "http://localhost:4000", // ★ 네이버 아님
+          target: "http://172.17.128.1:4000", // ★ 네이버 아님
           changeOrigin: true,
         },
       },

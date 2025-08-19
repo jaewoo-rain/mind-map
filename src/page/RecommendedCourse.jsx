@@ -1,7 +1,6 @@
-// src/MapPage.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./RecommendedCourse.css";
-import {getDistanceFromLatLonInKm} from "../utils/location.js";
+import { getDistanceFromLatLonInKm } from "../utils/location.js";
 import AlertStart from "../components/AlertStart.jsx";
 import AlertNotStart from "../components/AlertNotStart.jsx";
 
@@ -11,8 +10,8 @@ import AlertNotStart from "../components/AlertNotStart.jsx";
  * (선택) VITE_TMAP_PROXY=http://localhost:4000/api/tmap/pedestrian
  */
 
-// ────────────────────────────────────────────────────────────────────────────────
-// 네이버 지도 스크립트 로더
+// ────────────────────────────────────────────────
+// 네이버 지도 로더
 function loadNaverMaps(clientId) {
   return new Promise((resolve, reject) => {
     if (typeof window !== "undefined" && window.naver?.maps) {
@@ -40,11 +39,11 @@ function loadNaverMaps(clientId) {
   });
 }
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Tmap 보행자 프록시 호출
+// ────────────────────────────────────────────────
+// Tmap 보행자 프록시
 const TMAP_PROXY =
   import.meta.env.VITE_TMAP_PROXY ||
-  "http://localhost:4000/api/tmap/pedestrian";
+  "http://192.168.35.130:4000/api/tmap/pedestrian";
 
 async function fetchTmapPedestrian({
   startLng,
@@ -72,200 +71,266 @@ async function fetchTmapPedestrian({
   }
 }
 
-// ────────────────────────────────────────────────────────────────────────────────
-// 예시 코스 데이터
-const COURSES = [ // 내꺼: 35.8368214, 127.1223943 함덕: 33.333918 126.256099
-  {
-    id: "c1",
-    title: "아름다운 해변코스",
-    desc1: "함덕해수욕장에서,",
-    desc2: "000까지 가는 러닝 코스",
-    origin: { name: "시작점 이름", lat:  33.333918, lng: 126.256099 },
-    dest: { name: "목적지 이름", lat: 33.346847, lng: 126.249495 },
-    spots: [
-      { name: "금오름", lat: 33.3396, lng: 126.2545 },
-      { name: "외돌개", lat: 33.3433, lng: 126.2522 },
-    ],
-  },
-  {
-    id: "c2",
-    title: "숲길 힐링코스",
-    desc1: "사려니숲길에서,",
-    desc2: "완만한 업힐로 힐링 러닝",
-    origin: { name: "출발지", lat: 33.3655, lng: 126.2692 },
-    dest: { name: "도착지", lat: 33.3729, lng: 126.2621 },
-    spots: [
-      { name: "전망 포인트", lat: 33.3691, lng: 126.2666 },
-      { name: "포토 스팟", lat: 33.3703, lng: 126.2637 },
-    ],
-  },
-  {
-    id: "c3",
-    title: "올레 바다코스",
-    desc1: "바닷바람 맞으며,",
-    desc2: "워크/런 인터벌에 최적",
-    origin: { name: "출발지", lat: 33.3521, lng: 126.2339 },
-    dest: { name: "도착지", lat: 33.3587, lng: 126.2411 },
-    spots: [
-      { name: "뷰 포인트", lat: 33.3546, lng: 126.2374 },
-      { name: "카페존", lat: 33.3568, lng: 126.2392 },
-    ],
-  },
-];
+// 표시용 계산
+const paceMinPerKm = 8;
+function estimateTimeStr(km, pace = paceMinPerKm) {
+  const minutes = Math.round(km * pace);
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+function levelByDistance(km) {
+  if (km < 5) return "초급";
+  if (km < 10) return "중급";
+  return "상급";
+}
 
-// ────────────────────────────────────────────────────────────────────────────────
-// 코스 카드
-function CourseCard({ course, active, onClick }) {
+// ────────────────────────────────────────────────
+// 카드 (버튼만 클릭 가능)
+function CourseCard({ course, onRun }) {
+  const distKm = useMemo(() => {
+    return getDistanceFromLatLonInKm(
+      course.origin.lat,
+      course.origin.lng,
+      course.dest.lat,
+      course.dest.lng
+    );
+  }, [course]);
+
+  const level = levelByDistance(distKm);
+  const timeStr = estimateTimeStr(distKm);
+
   return (
-    <button
-      type="button"
-      className={`course-card ${active ? "active" : ""}`}
-      onClick={onClick}
-      aria-pressed={active}
-    >
-      <div className="thumbs">
-        <div className="thumb" />
-        <div className="thumb" />
+    <div className="course-card">
+      <div className="cc-head">
+        <div className="cc-thumb" />
+        <div className="cc-meta">
+          <div className="cc-title">{course.title}</div>
+
+          <div className="cc-desc">
+            <div>{course.desc1}</div>
+            <div>{course.desc2}</div>
+          </div>
+
+          <div className="cc-row">
+            <div className="cc-level">
+              <span>{level}</span>
+            </div>
+            <div className="cc-dist">
+              {distKm.toFixed(2)}km · 예상시간 {timeStr}
+            </div>
+          </div>
+        </div>
       </div>
-      <div className="title">{course.title}</div>
-      <div className="desc">
-        <div>{course.desc1}</div>
-        <div>{course.desc2}</div>
-      </div>
+
       <div className="divider" />
-      <div className="chips">
-        {course.spots.slice(0, 2).map((s) => (
-          <span key={s.name} className="chip">
-            {s.name}
-          </span>
+
+      <div className="cc-bottom">
+        {(course.spots || []).slice(0, 2).map((s) => (
+          <div key={s.name} className="cc-spot">
+            <div className="cc-spot-icon" />
+            <div className="cc-spot-name">{s.name}</div>
+          </div>
         ))}
+
+        <button type="button" className="cc-run-btn" onClick={onRun}>
+          코스 달리기
+        </button>
       </div>
-    </button>
+    </div>
   );
 }
 
-// ────────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────
+const LOC_ICON_URL = "/location.png"; // public/location.png
+const SPOT_ICON_URL = "/spot.png"; // public/spot.png
+const JSON_URL = "/data/course_bundles/course_5.json";
+
+// 하드코딩으로 선택할 라인들(스팟 포함되는 라인)
+const COURSES = [
+  // 각 라인 인덱스 + 카드에 쓸 더미 텍스트 + 보여줄 스팟명(최대 2개)
+  {
+    id: 3,
+    title: "남원 바닷길 러닝",
+    desc1: "남원용암해수풀장에서,",
+    desc2: "큰엉까지 잔잔한 오션뷰",
+    spotNames: ["남원용암해수풀장", "큰엉입구"],
+  },
+  {
+    id: 2,
+    title: "위미 동백 코스",
+    desc1: "위미 바닷가에서,",
+    desc2: "세천포구까지 포토스팟",
+    spotNames: ["위미 동백나무 군락지", "세천포구"],
+  },
+  {
+    id: 4,
+    title: "망장포–쇠소깍",
+    desc1: "망장포에서,",
+    desc2: "쇠소깍다리까지 완만한 코스",
+    spotNames: ["망장포", "쇠소깍다리"],
+  },
+];
+
 export default function RecommendedCourse() {
   const NAVER_KEY = import.meta.env.VITE_NAVER_CLIENT_ID;
 
-  // 선택된 코스 인덱스
+  // 코스 로딩
+  const [courses, setCourses] = useState([]);
   const [idx, setIdx] = useState(0);
-  const selectedCourse = useMemo(() => COURSES[idx], [idx]);
+  const selectedCourse = useMemo(
+    () => (courses.length ? courses[idx] : null),
+    [courses, idx]
+  );
 
-  // 오류 메시지
   const [msg, setMsg] = useState("");
-  
-  // 팝업 상태
   const [alertComponent, setAlertComponent] = useState(null);
 
-  // 지도/오버레이 레퍼런스
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const overlaysRef = useRef({ markers: [], polylines: [] });
 
-  // 슬라이더 스크롤/드래그 상태
+  // 캐러셀(네이티브 스크롤 + 부드러운 스냅)
   const sliderRef = useRef(null);
-  const scrollTimer = useRef(null);
-  const CARD_W = 240;
+  const CARD_W = 308;
   const GAP = 12;
 
-  // 드래그용 상태
-  const dragRef = useRef({
-    isDown: false,
-    startX: 0,
-    startScrollLeft: 0,
-    lastX: 0,
-    lastT: 0,
-    vX: 0, // flick 판별용 수평 속도(px/ms)
-    didMove: false,
-  });
+  // 가운데 스냅 계산
+  const step = () => CARD_W + GAP;
+  const padL = () =>
+    sliderRef.current
+      ? parseFloat(getComputedStyle(sliderRef.current).paddingLeft) || 0
+      : 0;
 
-  // ── 공용 스냅 함수
-  const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
-  const snapToNearest = (useVelocity = true) => {
+  const getTargetLeft = (i) => {
     const el = sliderRef.current;
-    if (!el) return;
-    const step = CARD_W + GAP;
-    let target = Math.round(el.scrollLeft / step);
-
-    if (useVelocity) {
-      const v = dragRef.current.vX; // +면 오른쪽으로 드래그(콘텐츠 왼쪽으로 스크롤)
-      const speed = Math.abs(v);
-      if (speed > 0.7) {
-        // flick: 다음/이전 카드로 튕김
-        target += v < 0 ? 1 : -1;
-      }
-    }
-    target = clamp(target, 0, COURSES.length - 1);
-    setIdx(target);
-    el.scrollTo({ left: target * step, behavior: "smooth" });
+    if (!el) return 0;
+    return i * step() - (el.clientWidth - CARD_W) / 2 + padL();
   };
 
-  // ── 가로 스크롤 디바운스 → 스냅
-  const onSliderScroll = () => {
+  const currentIndexByCenter = () => {
+    const el = sliderRef.current;
+    if (!el) return 0;
+    const centerAdjusted =
+      el.scrollLeft - padL() + (el.clientWidth - CARD_W) / 2;
+    return Math.round(centerAdjusted / step());
+  };
+
+  // 이징 애니메이션
+  const animRef = useRef({ raf: 0 });
+  const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+  const cancelAnim = () => {
+    if (animRef.current.raf) cancelAnimationFrame(animRef.current.raf);
+    animRef.current.raf = 0;
+  };
+  const animateTo = (left, duration = 420) => {
+    const el = sliderRef.current;
+    if (!el) return;
+    cancelAnim();
+    const from = el.scrollLeft;
+    const to = Math.max(0, left);
+    const start = performance.now();
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      el.scrollLeft = from + (to - from) * easeOutCubic(t);
+      if (t < 1) animRef.current.raf = requestAnimationFrame(tick);
+      else animRef.current.raf = 0;
+    };
+    animRef.current.raf = requestAnimationFrame(tick);
+  };
+
+  const centerToIndex = (i, withAnim = true) => {
+    const left = getTargetLeft(i);
     if (!sliderRef.current) return;
-    if (scrollTimer.current) clearTimeout(scrollTimer.current);
-    scrollTimer.current = setTimeout(() => {
-      snapToNearest(false); // 스크롤만 했을 때는 속도 고려 X
-    }, 120);
+    withAnim ? animateTo(left) : (sliderRef.current.scrollLeft = left);
   };
 
-  // ── 포인터 드래그 핸들러 (마우스/터치 겸용)
-  const onPointerDown = (e) => {
-    const el = sliderRef.current;
-    if (!el) return;
-    dragRef.current.isDown = true;
-    dragRef.current.didMove = false;
-    const x = e.clientX ?? (e.touches && e.touches[0]?.clientX) ?? 0;
-    dragRef.current.startX = x;
-    dragRef.current.startScrollLeft = el.scrollLeft;
-    dragRef.current.lastX = x;
-    dragRef.current.lastT = performance.now();
-    dragRef.current.vX = 0;
-
-    el.classList.add("dragging");
-    // 모바일 브라우저에서 수평 제스처를 우리가 처리
-    // (CSS: touch-action: pan-y; 도 함께 사용)
-    el.setPointerCapture?.(e.pointerId);
+  const snapToNearest = () => {
+    if (!sliderRef.current || courses.length === 0) return;
+    const target = Math.max(
+      0,
+      Math.min(currentIndexByCenter(), courses.length - 1)
+    );
+    setIdx(target);
+    centerToIndex(target, true);
   };
 
-  const onPointerMove = (e) => {
-    if (!dragRef.current.isDown) return;
-    const el = sliderRef.current;
-    if (!el) return;
-
-    const x = e.clientX ?? (e.touches && e.touches[0]?.clientX) ?? 0;
-    const dx = x - dragRef.current.startX;
-    if (Math.abs(dx) > 2) dragRef.current.didMove = true;
-
-    // 드래그 방향 반대로 스크롤 이동
-    el.scrollLeft = dragRef.current.startScrollLeft - dx;
-
-    // 속도 추정 (px/ms)
-    const now = performance.now();
-    const dt = now - dragRef.current.lastT || 1;
-    dragRef.current.vX = (x - dragRef.current.lastX) / dt;
-    dragRef.current.lastX = x;
-    dragRef.current.lastT = now;
+  // 스크롤 중 active 동기화 + 멈춤 감지로 스냅
+  const idleTimer = useRef(null);
+  const onSliderScroll = () => {
+    if (!sliderRef.current || courses.length === 0) return;
+    setIdx((prev) => {
+      const i = currentIndexByCenter();
+      return i !== prev ? i : prev;
+      // 스냅은 아래 타이머에서
+    });
+    clearTimeout(idleTimer.current);
+    idleTimer.current = setTimeout(() => {
+      if (!animRef.current.raf) snapToNearest();
+    }, 90);
   };
 
-  const onPointerUp = (e) => {
-    const el = sliderRef.current;
-    if (!el) return;
-    dragRef.current.isDown = false;
-    el.classList.remove("dragging");
-    el.releasePointerCapture?.(e.pointerId);
-
-    // 드래그가 있었으면 스냅 (속도 고려)
-    if (dragRef.current.didMove) {
-      snapToNearest(true);
-    }
-  };
-
-  // 네이버 지도 초기화
+  // ── JSON 로딩 → 라인 3개를 코스로 구성
   useEffect(() => {
     let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(JSON_URL);
+        const data = await res.json();
 
+        const spotsByName = new Map(
+          (data.spots || []).map((s) => [
+            s.name,
+            { name: s.name, lat: s.lat, lng: s.lng },
+          ])
+        );
+
+        const built = COURSES.map((p, i) => {
+          const line = (data.lines || [])[p.id];
+          if (!Array.isArray(line) || line.length < 2) return null;
+
+          const first = line[0]; // [lng,lat]
+          const last = line[line.length - 1];
+
+          const pickSpots = (p.spotNames || [])
+            .map((nm) => spotsByName.get(nm))
+            .filter(Boolean);
+
+          return {
+            id: `json5_${p.id}_${i}`,
+            title: p.title,
+            desc1: p.desc1,
+            desc2: p.desc2,
+            origin: {
+              name: p.spotNames?.[0] || "출발지",
+              lat: first[1],
+              lng: first[0],
+            },
+            dest: {
+              name: p.spotNames?.[1] || "도착지",
+              lat: last[1],
+              lng: last[0],
+            },
+            spots: pickSpots,
+            // 지도에 바로 그리도록 JSON 라인 좌표를 path 로 보관
+            path: line.map(([lng, lat]) => ({ lat, lng })),
+          };
+        }).filter(Boolean);
+
+        if (!cancelled) setCourses(built);
+      } catch (e) {
+        console.error(e);
+        if (!cancelled) setMsg("코스 데이터를 불러오지 못했어요.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // ── 지도 초기화
+  useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
         if (!NAVER_KEY) {
@@ -274,27 +339,18 @@ export default function RecommendedCourse() {
         }
         const naver = await loadNaverMaps(NAVER_KEY);
         if (cancelled) return;
-
-        const center = new naver.maps.LatLng(
-          COURSES[0].origin.lat,
-          COURSES[0].origin.lng
-        );
-
         const map = new naver.maps.Map(mapContainerRef.current, {
-          center,
-          zoom: 15,
+          center: new naver.maps.LatLng(33.27, 126.67),
+          zoom: 13,
           logoControl: true,
           mapDataControl: false,
         });
         mapRef.current = map;
-
-        await drawCourse(COURSES[0]);
       } catch (e) {
         console.error(e);
         setMsg(`지도 초기화 실패: ${e?.message || e}`);
       }
     })();
-
     return () => {
       cancelled = true;
       clearOverlays();
@@ -303,82 +359,43 @@ export default function RecommendedCourse() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 코스 변경 → 경로 다시 그림
+  // 지도에 코스 그리기 (맵/코스 준비된 뒤)
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !selectedCourse) return;
     drawCourse(selectedCourse);
+    requestAnimationFrame(() => centerToIndex(idx, false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCourse?.id]);
+  }, [selectedCourse?.id, mapRef.current]);
 
-  // 카드 클릭 → 선택/지도 이동
-  const selectCourse = (i) => {
-    // 드래그 직후의 "클릭"은 무시 (오동작 방지)
-    if (dragRef.current.didMove) return;
-    setIdx(i);
-    if (sliderRef.current) {
-      sliderRef.current.scrollTo({
-        left: i * (CARD_W + GAP),
-        behavior: "smooth",
-      });
-    }
-  };
-
-  // 내 위치 이동
-  const goMyLocation = () => {
-    setMsg("");
-    if (!mapRef.current || !window.naver?.maps) {
-      setMsg("지도가 아직 준비되지 않았어요.");
-      return;
-    }
-    if (!navigator.geolocation) {
-      setMsg("이 브라우저는 위치 정보를 지원하지 않습니다.");
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (p) => {
-        const pos = new window.naver.maps.LatLng(
-          p.coords.latitude,
-          p.coords.longitude
-        );
-        mapRef.current.panTo(pos);
-        mapRef.current.setZoom(16);
-      },
-      (e) => setMsg(e.message || "내 위치를 가져오지 못했어요."),
-      { enableHighAccuracy: true }
-    );
-  };
-
-  // 위치  정보 처리
+  // 위치 체크 → 시작
   const handleStartRunning = () => {
     setMsg("");
+    if (!selectedCourse?.origin) {
+      setMsg("선택된 코스의 시작점을 찾을 수 없어요.");
+      return;
+    }
     if (!navigator.geolocation) {
       setMsg("이 브라우저는 위치 정보를 지원하지 않습니다.");
       return;
     }
+    const start = selectedCourse.origin;
     navigator.geolocation.getCurrentPosition(
       (p) => {
-        const currentLat = p.coords.latitude;
-        const currentLng = p.coords.longitude;
-        const courseStartLat = selectedCourse.origin.lat;
-        const courseStartLng = selectedCourse.origin.lng;
-
-        console.log("브라우저 현재 위치:", { lat: currentLat, lng: currentLng });
-        console.log("코스 시작 위치:", { lat: courseStartLat, lng: courseStartLng });
-
-        const distanceInKm = getDistanceFromLatLonInKm(
-          currentLat,
-          currentLng,
-          courseStartLat,
-          courseStartLng
-        );
-        const distanceInMeters = distanceInKm * 1000;
-
-        console.log("계산된 거리 (미터):", distanceInMeters);
-
-        if (distanceInMeters <= 50) {
-          setAlertComponent(<AlertStart onClose={() => setAlertComponent(null)} />);
+        const d =
+          getDistanceFromLatLonInKm(
+            p.coords.latitude,
+            p.coords.longitude,
+            start.lat,
+            start.lng
+          ) * 1000;
+        if (d <= 50) {
+          setAlertComponent(
+            <AlertStart onClose={() => setAlertComponent(null)} />
+          );
         } else {
-          setAlertComponent(<AlertNotStart onClose={() => setAlertComponent(null)} />);
+          setAlertComponent(
+            <AlertNotStart onClose={() => setAlertComponent(null)} />
+          );
         }
       },
       (e) => setMsg(e.message || "내 위치를 가져오지 못했어요."),
@@ -386,92 +403,136 @@ export default function RecommendedCourse() {
     );
   };
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // 지도 오버레이 관리 & 코스 그리기
+  // ── 오버레이 관리 & 경로
   function clearOverlays() {
     const { markers, polylines } = overlaysRef.current;
-    markers.forEach((m) => m.setMap(null));
-    polylines.forEach((p) => p.setMap(null));
+    markers.forEach((m) => m.setMap?.(null));
+    polylines.forEach((p) => p.setMap?.(null));
     overlaysRef.current.markers = [];
     overlaysRef.current.polylines = [];
+  }
+
+  function makeStartGoalMarker(latlng, text, side = "right") {
+    const naver = window.naver;
+    return new naver.maps.Marker({
+      position: latlng,
+      map: mapRef.current,
+      zIndex: 100,
+      title: text,
+      icon: {
+        content: `
+          <div class="marker-with-label ${side}">
+            <img class="marker-loc" src="${LOC_ICON_URL}" alt="${text}" />
+            <div class="marker-label">${text || ""}</div>
+          </div>
+        `,
+        size: new naver.maps.Size(28, 28),
+        anchor: new naver.maps.Point(14, 28),
+      },
+    });
+  }
+  function makeSpotMarker(latlng, title = "") {
+    const naver = window.naver;
+    return new naver.maps.Marker({
+      position: latlng,
+      map: mapRef.current,
+      zIndex: 90,
+      title,
+      icon: {
+        content: `<img class="marker-spot" src="${SPOT_ICON_URL}" alt="${title}" />`,
+        size: new naver.maps.Size(22, 22),
+        anchor: new naver.maps.Point(11, 11),
+      },
+    });
+  }
+  function dropGuideDots(latlngs) {
+    const naver = window.naver;
+    if (!latlngs || latlngs.length < 4) return;
+    const picks = [0.25, 0.5, 0.75]
+      .map((t) => Math.floor((latlngs.length - 1) * t))
+      .filter(
+        (i, idx, arr) =>
+          i > 0 && i < latlngs.length - 1 && arr.indexOf(i) === idx
+      );
+    picks.forEach((i) => {
+      const mk = new naver.maps.Marker({
+        position: latlngs[i],
+        map: mapRef.current,
+        zIndex: 80,
+        icon: {
+          content: `<div class="guide-dot"></div>`,
+          size: new naver.maps.Size(10, 10),
+          anchor: new naver.maps.Point(5, 5),
+        },
+      });
+      overlaysRef.current.markers.push(mk);
+    });
   }
 
   async function drawCourse(course) {
     const naver = window.naver;
     if (!naver?.maps || !mapRef.current) return;
     setMsg("");
-
     clearOverlays();
 
     const map = mapRef.current;
-    const origin = new naver.maps.LatLng(course.origin.lat, course.origin.lng);
-    const dest = new naver.maps.LatLng(course.dest.lat, course.dest.lng);
 
-    // 출/도착 마커
-    const startMarker = new naver.maps.Marker({
-      position: origin,
-      map,
-      title: course.origin.name || "출발",
-      icon: {
-        content: '<div class="pin black"><div class="dot white"></div></div>',
-        size: new naver.maps.Size(24, 30),
-        anchor: new naver.maps.Point(12, 30),
-      },
-    });
-    const goalMarker = new naver.maps.Marker({
-      position: dest,
-      map,
-      title: course.dest.name || "도착",
-      icon: {
-        content: '<div class="pin black"><div class="dot white"></div></div>',
-        size: new naver.maps.Size(24, 30),
-        anchor: new naver.maps.Point(12, 30),
-      },
-    });
-    overlaysRef.current.markers.push(startMarker, goalMarker);
+    // 경로: JSON path 우선, 없으면 Tmap 폴백
+    let latlngs =
+      Array.isArray(course.path) && course.path.length > 1
+        ? course.path.map((p) => new naver.maps.LatLng(p.lat, p.lng))
+        : null;
 
-    // 스팟 마커(오렌지 포인트)
-    course.spots?.forEach((s) => {
-      const m = new naver.maps.Marker({
-        position: new naver.maps.LatLng(s.lat, s.lng),
-        map,
-        title: s.name,
-        icon: {
-          content: '<div class="spot"></div>',
-          size: new naver.maps.Size(14, 14),
-          anchor: new naver.maps.Point(7, 7),
-        },
+    if (!latlngs) {
+      const tmapPath = await fetchTmapPedestrian({
+        startLng: course.origin.lng,
+        startLat: course.origin.lat,
+        goalLng: course.dest.lng,
+        goalLat: course.dest.lat,
       });
-      overlaysRef.current.markers.push(m);
-    });
-
-    // 경로 구하기 (Tmap → 실패시 직선 폴백)
-    let latlngs = null;
-    const tmapPath = await fetchTmapPedestrian({
-      startLng: course.origin.lng,
-      startLat: course.origin.lat,
-      goalLng: course.dest.lng,
-      goalLat: course.dest.lat,
-    });
-
-    if (Array.isArray(tmapPath) && tmapPath.length > 1) {
-      latlngs = tmapPath.map(([lng, lat]) => new naver.maps.LatLng(lat, lng));
-    } else {
-      setMsg("보행자 경로를 불러오지 못해 직선을 표시했어요.");
-      latlngs = [origin, dest];
+      if (Array.isArray(tmapPath) && tmapPath.length > 1) {
+        latlngs = tmapPath.map(([lng, lat]) => new naver.maps.LatLng(lat, lng));
+      } else {
+        setMsg("보행자 경로를 불러오지 못해 직선을 표시했어요.");
+        latlngs = [
+          new naver.maps.LatLng(course.origin.lat, course.origin.lng),
+          new naver.maps.LatLng(course.dest.lat, course.dest.lng),
+        ];
+      }
     }
 
-    // 라인 그리기
+    // 라인
     const line = new naver.maps.Polyline({
       path: latlngs,
       strokeColor: "#111111",
       strokeOpacity: 0.95,
       strokeWeight: 6,
+      zIndex: 60,
       map,
     });
     overlaysRef.current.polylines.push(line);
 
-    // 지도 범위 맞추기
+    // 출/도착
+    const startMarker = makeStartGoalMarker(
+      new naver.maps.LatLng(course.origin.lat, course.origin.lng),
+      course.origin.name || "출발",
+      "left"
+    );
+    const goalMarker = makeStartGoalMarker(
+      new naver.maps.LatLng(course.dest.lat, course.dest.lng),
+      course.dest.name || "도착",
+      "right"
+    );
+    overlaysRef.current.markers.push(startMarker, goalMarker);
+
+    // 스팟
+    (course.spots || []).forEach((s) => {
+      const mk = makeSpotMarker(new naver.maps.LatLng(s.lat, s.lng), s.name);
+      overlaysRef.current.markers.push(mk);
+    });
+
+    // 가이드 점 + 범위
+    dropGuideDots(latlngs);
     const bounds = latlngs.reduce(
       (b, ll) => (b.extend(ll), b),
       new naver.maps.LatLngBounds(latlngs[0], latlngs[0])
@@ -479,57 +540,40 @@ export default function RecommendedCourse() {
     map.fitBounds(bounds);
   }
 
-  // ────────────────────────────────────────────────────────────────────────────
+  // ── UI
   return (
     <div className="screen">
-      {/* 상단 앱바 */}
       <div className="appbar">
         <div className="appbar-title">추천코스</div>
       </div>
 
-      {/* 지도 */}
       <div ref={mapContainerRef} className="map-container" />
 
-      {/* 지도 위 오버레이 */}
       <div className="floating-top">
         {msg && <div className="toast">{msg}</div>}
       </div>
 
-      {/* 코스 슬라이더 */}
+      {/* 카드 캐러셀: 네이티브 스크롤 + rAF 스냅 */}
       <div className="carousel-wrap">
         <div
           ref={sliderRef}
           className="carousel"
           onScroll={onSliderScroll}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-          onPointerLeave={onPointerUp}
-          data-active-index={idx}
+          style={{ ["--card-w"]: `${CARD_W}px` }}
         >
-          {COURSES.map((c, i) => (
+          {courses.map((c, i) => (
             <div
               key={c.id}
-              onClick={() => selectCourse(i)}
               className="card-click-wrap"
+              style={{ width: CARD_W }}
             >
-              <CourseCard course={c} active={i === idx} />
+              <CourseCard course={c} onRun={handleStartRunning} />
             </div>
           ))}
           <div className="end-spacer" />
         </div>
       </div>
 
-      {/* 하단 CTA */}
-      <div className="bottom-bar">
-        <button
-          className="btn primary"
-          onClick={handleStartRunning}
-        >
-          이 코스로 달리기
-        </button>
-      </div>
       {alertComponent}
     </div>
   );
