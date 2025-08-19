@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import "./MapPage.css";
 import { getDistanceFromLatLonInKm } from "../utils/location.js";
 import AlertArrive from "../components/AlertArrive.jsx";
+import RunningState from "../components/RunningState.jsx";
 
 const NAVER_KEY = import.meta.env.VITE_NAVER_CLIENT_ID;
 
@@ -265,6 +266,9 @@ export default function RunningPage() {
         </div>
       )}
       {arrivalAlert}
+      <div style={{ position: 'absolute', bottom: '5%', left: '50%', transform: 'translateX(-50%)', zIndex: 100 }}>
+        <RunningState />
+      </div>
     </div>
   );
 }
