@@ -65,8 +65,7 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 const TUNNEL_HOST =
-  process.env.CF_TUNNEL_HOST ||
-  "julie-detected-learn-houston.trycloudflare.com";
+  process.env.CF_TUNNEL_HOST || "ja-journalism-trailers-glen.trycloudflare.com";
 
 export default defineConfig(({ mode }) => {
   loadEnv(mode, process.cwd(), ""); // 프론트 번들에 노출될 값은 VITE_ 접두사만
