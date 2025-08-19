@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react';
+import useWatchLocation from '../hooks/useWatchLocation';
+import { getDistanceFromLatLonInKm } from '../utils/location';
 
 const RunningState = () => {
     const [startTime] = useState(new Date());
     const [elapsedTime, setElapsedTime] = useState(0);
+    const [distance, setDistance] = useState(0);
+    const [prevLocation, setPrevLocation] = useState(null);
+    const { location } = useWatchLocation();
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -12,6 +17,19 @@ const RunningState = () => {
 
         return () => clearInterval(timer);
     }, [startTime]);
+
+    useEffect(() => {
+        if (location && prevLocation) {
+            const newDistance = getDistanceFromLatLonInKm(
+                prevLocation.latitude,
+                prevLocation.longitude,
+                location.latitude,
+                location.longitude
+            );
+            setDistance((prevDistance) => prevDistance + newDistance);
+        }
+        setPrevLocation(location);
+    }, [location, prevLocation]);
 
     const formatTime = (timeInSeconds) => {
         const hours = Math.floor(timeInSeconds / 3600).toString().padStart(2, '0');
@@ -150,7 +168,7 @@ const RunningState = () => {
                                 fontWeight: '600',
                                 color: '#3A3A3C',
                                 fontFamily: 'Pretendard',
-                            }}>10.9
+                            }}>{distance.toFixed(1)}
                             </div>
                             <div style={{
                                 opacity: 0.70,
