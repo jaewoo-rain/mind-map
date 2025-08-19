@@ -196,6 +196,7 @@ export default function MapPage() {
         );
         mapRef.current.panTo(pos);
         mapRef.current.setZoom(16);
+        console.log(p.coords.latitude, p.coords.longitude);
       },
       (e) => setMapErr(e.message || "내 위치를 가져오지 못했어요."),
       { enableHighAccuracy: true }

@@ -1,5 +1,6 @@
 // src/MapPage.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from 'react-router-dom';
 import "./RecommendedCourse.css";
 import {getDistanceFromLatLonInKm} from "../utils/location.js";
 import AlertStart from "../components/AlertStart.jsx";
@@ -74,13 +75,13 @@ async function fetchTmapPedestrian({
 
 // ────────────────────────────────────────────────────────────────────────────────
 // 예시 코스 데이터
-const COURSES = [ // 내꺼: 35.8368214, 127.1223943 함덕: 33.333918 126.256099
+const COURSES = [ // 내꺼: 35.8350848, 127.1169024 함덕: 33.333918 126.256099 -> 33.346847 126.249495
   {
-    id: "c1",
+    id: "12",
     title: "아름다운 해변코스",
     desc1: "함덕해수욕장에서,",
     desc2: "000까지 가는 러닝 코스",
-    origin: { name: "시작점 이름", lat:  33.333918, lng: 126.256099 },
+    origin: { name: "시작점 이름", lat:  35.8350848, lng: 127.1169024 },
     dest: { name: "목적지 이름", lat: 33.346847, lng: 126.249495 },
     spots: [
       { name: "금오름", lat: 33.3396, lng: 126.2545 },
@@ -88,7 +89,7 @@ const COURSES = [ // 내꺼: 35.8368214, 127.1223943 함덕: 33.333918 126.25609
     ],
   },
   {
-    id: "c2",
+    id: "2",
     title: "숲길 힐링코스",
     desc1: "사려니숲길에서,",
     desc2: "완만한 업힐로 힐링 러닝",
@@ -100,7 +101,7 @@ const COURSES = [ // 내꺼: 35.8368214, 127.1223943 함덕: 33.333918 126.25609
     ],
   },
   {
-    id: "c3",
+    id: "3-A",
     title: "올레 바다코스",
     desc1: "바닷바람 맞으며,",
     desc2: "워크/런 인터벌에 최적",
@@ -146,6 +147,7 @@ function CourseCard({ course, active, onClick }) {
 
 // ────────────────────────────────────────────────────────────────────────────────
 export default function RecommendedCourse() {
+  const navigate = useNavigate();
   const NAVER_KEY = import.meta.env.VITE_NAVER_CLIENT_ID;
 
   // 선택된 코스 인덱스
@@ -348,7 +350,7 @@ export default function RecommendedCourse() {
     );
   };
 
-  // 위치  정보 처리
+  // 위치 정보 처리
   const handleStartRunning = () => {
     setMsg("");
     if (!navigator.geolocation) {
@@ -375,8 +377,13 @@ export default function RecommendedCourse() {
 
         console.log("계산된 거리 (미터):", distanceInMeters);
 
-        if (distanceInMeters <= 50) {
-          setAlertComponent(<AlertStart onClose={() => setAlertComponent(null)} />);
+        if (distanceInMeters <= 100) {
+          setAlertComponent(
+            <AlertStart 
+              onClose={() => setAlertComponent(null)} 
+              onStart={() => navigate('/run', { state: { courseId: selectedCourse.id } })}
+            />
+          );
         } else {
           setAlertComponent(<AlertNotStart onClose={() => setAlertComponent(null)} />);
         }
