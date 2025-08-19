@@ -65,7 +65,8 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 const TUNNEL_HOST =
-  process.env.CF_TUNNEL_HOST || "ja-journalism-trailers-glen.trycloudflare.com";
+  process.env.CF_TUNNEL_HOST ||
+  "rejected-finnish-venue-priorities.trycloudflare.com";
 
 export default defineConfig(({ mode }) => {
   loadEnv(mode, process.cwd(), ""); // 프론트 번들에 노출될 값은 VITE_ 접두사만
@@ -89,12 +90,12 @@ export default defineConfig(({ mode }) => {
           scope: "/",
           icons: [
             {
-              src: "/check.png",
+              src: "/logo1.png",
               sizes: "192x192",
               type: "image/png",
             },
             {
-              src: "/photoshoot.png",
+              src: "/logo2.png",
               sizes: "512x512",
               type: "image/png",
             },
