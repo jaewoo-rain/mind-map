@@ -39,26 +39,40 @@ function loadNaverMaps(clientId) {
 /** RecommendedCourse → navigate 로 전달한 courseId 해석 */
 function parseCourseId(raw) {
   const str = String(raw || "");
-  // "course_5_3" 형태(파일 5, 라인 index 3)
   let m = str.match(/^course_(\d+)_(\d+)$/);
   if (m) return { fileNo: m[1], lineIndex: parseInt(m[2], 10) };
-
-  // 백업: "5-3" 또는 "5_3"
   m = str.match(/^(\d+)[-_](\d+)$/);
   if (m) return { fileNo: m[1], lineIndex: parseInt(m[2], 10) };
-
-  // 백업: "5"만 오면 첫 라인
   m = str.match(/^(\d+)$/);
   if (m) return { fileNo: m[1], lineIndex: 0 };
-
-  // 최종 기본값
   return { fileNo: "5", lineIndex: 0 };
+}
+
+// ✅ 화면 실측 뷰포트 사이즈 훅 (주소창 변화 대응)
+function useViewport() {
+  const pick = () => ({
+    w: Math.round(window.visualViewport?.width ?? window.innerWidth),
+    h: Math.round(window.visualViewport?.height ?? window.innerHeight),
+  });
+  const [vp, setVp] = useState(pick);
+
+  useEffect(() => {
+    const onResize = () => setVp(pick());
+    window.addEventListener("resize", onResize);
+    window.visualViewport?.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.visualViewport?.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+    };
+  }, []);
+  return vp;
 }
 
 export default function RunningPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  // RecommendedCourse에서 navigate("/run", { state: { courseId } })
   const { fileNo, lineIndex } = parseCourseId(location.state?.courseId);
 
   const [mapErr, setMapErr] = useState("");
@@ -69,7 +83,6 @@ export default function RunningPage() {
   const [arrivalAlert, setArrivalAlert] = useState(null);
   const [showEndAlert, setShowEndAlert] = useState(false);
 
-  // RunningState state
   const [elapsedTime, setElapsedTime] = useState(0);
   const [distance, setDistance] = useState(0);
   const [calories, setCalories] = useState(0);
@@ -83,13 +96,35 @@ export default function RunningPage() {
   const polyRef = useRef(null);
   const markersRef = useRef({ start: null, end: null, me: null, poi: [] });
 
+  // ✅ 실측 뷰포트 사이즈
+  const { w: vpW, h: vpH } = useViewport();
+
+  // ✅ body 기본 여백 제거(전역 CSS 건드리지 않고)
+  useEffect(() => {
+    const body = document.body;
+    const prevMargin = body.style.margin;
+    const prevPadding = body.style.padding;
+    body.style.margin = "0";
+    body.style.padding = "0";
+    return () => {
+      body.style.margin = prevMargin;
+      body.style.padding = prevPadding;
+    };
+  }, []);
+
+  // ✅ 뷰포트 변화 시 지도 리사이즈
+  useEffect(() => {
+    const map = mapRef.current;
+    if (map && window.naver?.maps) {
+      window.naver.maps.Event.trigger(map, "resize");
+    }
+  }, [vpW, vpH]);
+
   // Timer effect
   useEffect(() => {
     let timer;
     if (!isPaused && !showEndAlert) {
-        timer = setInterval(() => {
-            setElapsedTime(prevTime => prevTime + 1);
-        }, 1000);
+      timer = setInterval(() => setElapsedTime((t) => t + 1), 1000);
     }
     return () => clearInterval(timer);
   }, [isPaused, showEndAlert]);
@@ -97,30 +132,30 @@ export default function RunningPage() {
   // Location tracking and calculation effect
   useEffect(() => {
     if (!isPaused && !showEndAlert && currentLocation && prevLocation) {
-        const newDistance = getDistanceFromLatLonInKm(
-            prevLocation.latitude,
-            prevLocation.longitude,
-            currentLocation.latitude,
-            currentLocation.longitude
-        );
-
-        // Threshold to prevent updates from GPS jitter (2 meters)
-        if (newDistance > 0.002) {
-            const newTotalDistance = distance + newDistance;
-            setDistance(newTotalDistance);
-            setCalories(newTotalDistance * 65); // Assuming average weight of 65kg
-
-            if (newTotalDistance > 0) {
-                const paceInMinutes = (elapsedTime / 60) / newTotalDistance;
-                setPace(paceInMinutes);
-            }
-        }
+      const newDistance = getDistanceFromLatLonInKm(
+        prevLocation.latitude,
+        prevLocation.longitude,
+        currentLocation.latitude,
+        currentLocation.longitude
+      );
+      if (newDistance > 0.002) {
+        const newTotal = distance + newDistance;
+        setDistance(newTotal);
+        setCalories(newTotal * 65);
+        if (newTotal > 0) setPace(elapsedTime / 60 / newTotal);
+      }
     }
     setPrevLocation(currentLocation);
-  }, [currentLocation, prevLocation, elapsedTime, isPaused, showEndAlert, distance]);
+  }, [
+    currentLocation,
+    prevLocation,
+    elapsedTime,
+    isPaused,
+    showEndAlert,
+    distance,
+  ]);
 
-
-  // 1) 코스 JSON 로드 후, 특정 라인만 선택
+  // 1) 코스 JSON 로드
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -132,11 +167,9 @@ export default function RunningPage() {
 
         const lines = data?.lines || [];
         const line = lines[lineIndex] || lines[0];
-        if (!Array.isArray(line) || line.length < 2) {
+        if (!Array.isArray(line) || line.length < 2)
           throw new Error("경로가 비어있어요.");
-        }
 
-        // POI(스팟 + 가이드포인트)
         const spots = (data.spots || []).map((s) => ({
           name: s.name,
           lat: s.lat,
@@ -176,7 +209,6 @@ export default function RunningPage() {
         const naver = await loadNaverMaps(NAVER_KEY);
         if (cancelled) return;
 
-        // 지도 생성
         const first = selectedLine[0]; // [lng,lat]
         const startLL = new naver.maps.LatLng(first[1], first[0]);
         const map = new naver.maps.Map(mapContainerRef.current, {
@@ -186,12 +218,10 @@ export default function RunningPage() {
         });
         mapRef.current = map;
 
-        // 기존 오버레이 정리
         if (polyRef.current) polyRef.current.setMap(null);
         Object.values(markersRef.current).forEach((m) => m?.setMap?.(null));
         markersRef.current = { start: null, end: null, me: null, poi: [] };
 
-        // 경로
         const path = selectedLine.map(
           ([lng, lat]) => new naver.maps.LatLng(lat, lng)
         );
@@ -204,7 +234,6 @@ export default function RunningPage() {
           map,
         });
 
-        // 출발/도착 마커
         const last = selectedLine[selectedLine.length - 1];
         const endLL = new naver.maps.LatLng(last[1], last[0]);
         markersRef.current.start = new naver.maps.Marker({
@@ -218,10 +247,9 @@ export default function RunningPage() {
           title: "도착",
         });
 
-        // 화면 맞춤
         const bounds = new naver.maps.LatLngBounds(path[0], path[0]);
         path.forEach((ll) => bounds.extend(ll));
-        map.fitBounds(bounds, { top: 80, right: 40, bottom: 120, left: 40 });
+        map.fitBounds(bounds, { top: 0, right: 0, bottom: 0, left: 0 }); // 꽉 차게
       } catch (e) {
         console.error(e);
         setMapErr(`지도 초기화 실패: ${e.message || e}`);
@@ -240,14 +268,11 @@ export default function RunningPage() {
   // 3) 사용자 위치 추적 + 스팟 근접 알림(50m)
   useEffect(() => {
     if (!poiList.length) return;
-
-    // 사용자 현재위치 마커
     let meMarker = null;
 
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
-
         if (mapRef.current && !meMarker) {
           meMarker = new window.naver.maps.Marker({
             position: new window.naver.maps.LatLng(lat, lng),
@@ -259,8 +284,6 @@ export default function RunningPage() {
         } else if (meMarker) {
           meMarker.setPosition(new window.naver.maps.LatLng(lat, lng));
         }
-
-        // POI 근접 체크
         for (const p of poiList) {
           if (visitedSpots.has(p.name) || arrivalAlert) continue;
           const dM = getDistanceFromLatLonInKm(lat, lng, p.lat, p.lng) * 1000;
@@ -296,28 +319,41 @@ export default function RunningPage() {
     };
   }, [poiList, visitedSpots, arrivalAlert]);
 
-  const handleStopClick = () => {
-    setShowEndAlert(true);
-  };
-
-  const handleCloseEndAlert = () => {
-    setShowEndAlert(false);
-  };
-
-  const handleEndRunning = () => {
-    setShowEndAlert(false);
-    navigate('/finish_run', {
-        state: { elapsedTime, distance, calories, pace } 
-    });
-  };
-
-  const togglePause = () => {
-    setIsPaused(!isPaused);
-  };
+  const handleStopClick = () => setShowEndAlert(true);
+  const handleCloseEndAlert = () => setShowEndAlert(false);
+  const handleEndRunning = () => (
+    setShowEndAlert(false),
+    navigate("/finish_run", {
+      state: { elapsedTime, distance, calories, pace },
+    })
+  );
+  const togglePause = () => setIsPaused(!isPaused);
 
   return (
-    <div className="screen">
-      <div ref={mapContainerRef} className="map-container" />
+    // ✅ CSS 없이 inline style로 전체 화면 고정 + 실측 높이 적용
+    <div
+      className="screen"
+      style={{
+        position: "fixed",
+        inset: 0,
+        width: "100vw",
+        height: `${vpH}px`,
+        overflow: "hidden",
+        background: "#0000", // 투명
+      }}
+    >
+      {/* ✅ 지도 컨테이너도 inline으로 꽉 채움 */}
+      <div
+        ref={mapContainerRef}
+        className="map-container"
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100vw",
+          height: `${vpH}px`,
+        }}
+      />
+
       {mapErr && (
         <div
           style={{
@@ -329,22 +365,36 @@ export default function RunningPage() {
             padding: 10,
             borderRadius: 6,
             fontSize: 12,
+            zIndex: 300,
           }}
         >
           {mapErr}
         </div>
       )}
+
       {arrivalAlert}
-      {showEndAlert && <AlertEnd onClose={handleCloseEndAlert} onEnd={handleEndRunning} />}
-      <div style={{ position: 'absolute', bottom: '5%', left: '50%', transform: 'translateX(-50%)', zIndex: 100 }}>
-        <RunningState 
-            onStopClick={handleStopClick} 
-            isPaused={isPaused}
-            togglePause={togglePause}
-            elapsedTime={elapsedTime}
-            distance={distance}
-            calories={calories}
-            pace={pace}
+      {showEndAlert && (
+        <AlertEnd onClose={handleCloseEndAlert} onEnd={handleEndRunning} />
+      )}
+
+      <div
+        style={{
+          position: "absolute",
+          width: 300,
+          bottom: "5%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 250,
+        }}
+      >
+        <RunningState
+          onStopClick={handleStopClick}
+          isPaused={isPaused}
+          togglePause={togglePause}
+          elapsedTime={elapsedTime}
+          distance={distance}
+          calories={calories}
+          pace={pace}
         />
       </div>
     </div>

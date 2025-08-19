@@ -26,7 +26,7 @@
 .appbar {
   position: absolute;
   inset: 0 0 auto 0;
-  height: 94px;
+  height: 70px;
   background: #1e1e22;
   color: #fff;
   box-shadow: 0 2px 46px rgba(0, 0, 0, 0.13);
@@ -36,7 +36,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  top: 40px;
+  top: 25px;
   text-align: center;
   font-family: Pretendard, system-ui, sans-serif;
   font-size: 16px;
@@ -48,7 +48,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  top: 94px;
+  top: 70px;
   bottom: 12px; /* 아래 캐러셀과 겹쳐 보여도 OK (지도 넓게) */
 }
 
@@ -117,7 +117,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  bottom: max(env(safe-area-inset-bottom) + 50px); /* 세이프에어리어 대응 */
+  bottom: calc(env(safe-area-inset-bottom) + 50px); /* 세이프에어리어 대응 */
   height: 170px;
   display: flex;
   align-items: center;
@@ -152,6 +152,7 @@
 /* ───────── CourseCard */
 .course-card {
   width: 308px;
+  margin-bottom: 30px;
   padding: 16px 20px;
   background: #fcfcfc;
   box-shadow: 2px 5px 10px rgba(0, 0, 0, 0.1);
