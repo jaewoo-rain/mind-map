@@ -216,7 +216,7 @@ export default function CameraCaptureMobile({
     position: "relative",
     background: "black",
     overflow: "hidden",
-    margin: "0 auto",
+    margin: "20px auto",
   };
   const statusBar = {
     width: 360,

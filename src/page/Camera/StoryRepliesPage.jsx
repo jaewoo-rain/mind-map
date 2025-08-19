@@ -11,12 +11,12 @@ export default function StoryRepliesPage({
   const [reply, setReply] = useState("");
   const [sentToastFor, setSentToastFor] = useState(null);
 
-  // 카드/레이아웃 상수
+  // 카드/레이아웃
   const CARD_W = 297;
   const CARD_H = 528;
   const GAP = 16;
 
-  // 컨테이너 폭을 측정해서 좌우 패딩을 계산 (가운데 정렬용)
+  // 컨테이너 폭 기반 좌우 패딩 계산(중앙 정렬)
   const [sidePad, setSidePad] = useState(32);
   useEffect(() => {
     const el = containerRef.current;
@@ -25,7 +25,6 @@ export default function StoryRepliesPage({
       const w = el.clientWidth || 360;
       const pad = Math.max((w - CARD_W) / 2, 16);
       setSidePad(pad);
-      // 스냅 위치도 동일하게 설정
       el.style.scrollPaddingLeft = `${pad}px`;
       el.style.scrollPaddingRight = `${pad}px`;
     };
@@ -39,50 +38,15 @@ export default function StoryRepliesPage({
     };
   }, []);
 
-  // 샘플/폴백
-  const fallbackMy = useMemo(
-    () => ({
-      id: "me",
-      author: "러너닉네임",
-      avatar: "https://placehold.co/30x30?text=ME",
-      timeAgo: "방금",
-      photo:
-        "https://images.unsplash.com/photo-1526483360412-f4dbaf036963?q=80&w=1200&auto=format&fit=crop",
-      caption: "오늘 풍경 bb",
-    }),
-    []
-  );
-  const fallbackOthers = useMemo(
-    () => [
-      {
-        id: "a1",
-        author: "Luna",
-        avatar: "https://placehold.co/30x30?text=L",
-        timeAgo: "2시간",
-        photo:
-          "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?q=80&w=1200&auto=format&fit=crop",
-        caption: "오름에서 본 풍경 bb",
-      },
-      {
-        id: "a2",
-        author: "Ming",
-        avatar: "https://placehold.co/30x30?text=M",
-        timeAgo: "9시간",
-        photo:
-          "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1200&auto=format&fit=crop",
-        caption: "러닝 끝난 뒤 바다",
-      },
-    ],
-    []
-  );
-
+  // 🔹 라우트/부모가 준 데이터만 사용
   const stories = useMemo(() => {
-    const me = myStory ? { id: "me", ...myStory } : fallbackMy;
-    const list = others?.length ? others : fallbackOthers;
-    return [me, ...list];
-  }, [myStory, others, fallbackMy, fallbackOthers]);
+    const arr = [];
+    if (myStory) arr.push({ id: "me", ...myStory });
+    if (Array.isArray(others)) arr.push(...others);
+    return arr;
+  }, [myStory, others]);
 
-  // 스크롤 → 가운데에 가장 가까운 카드 active 처리
+  // 가운데 카드 active 계산
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -91,17 +55,17 @@ export default function StoryRepliesPage({
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         const center = el.scrollLeft + el.clientWidth / 2;
-        let iClosest = 0;
+        let idx = 0;
         let best = Infinity;
         for (let i = 0; i < stories.length; i++) {
           const left = sidePad + i * (CARD_W + GAP) + CARD_W / 2;
           const dist = Math.abs(center - left);
           if (dist < best) {
             best = dist;
-            iClosest = i;
+            idx = i;
           }
         }
-        setActive(iClosest);
+        setActive(idx);
       });
     };
     el.addEventListener("scroll", onScroll, { passive: true });
@@ -113,10 +77,10 @@ export default function StoryRepliesPage({
   }, [stories.length, sidePad]);
 
   const handleSend = () => {
-    if (!reply.trim()) return;
+    if (!reply.trim() || !stories.length) return;
     const current = stories[active];
     // TODO: 실제 답장 API
-    setSentToastFor(current.id || active);
+    setSentToastFor(current.id ?? active);
     setReply("");
     setTimeout(() => setSentToastFor(null), 1500);
   };
@@ -128,6 +92,7 @@ export default function StoryRepliesPage({
     position: "relative",
     background: "black",
     overflow: "hidden",
+    margin: "20px auto",
   };
   const statusBar = {
     width: 360,
@@ -202,7 +167,7 @@ export default function StoryRepliesPage({
         </div>
       </div>
 
-      {/* 카드 가로 스크롤 영역 */}
+      {/* 카드 가로 스크롤 */}
       <div
         ref={containerRef}
         style={{
@@ -233,7 +198,7 @@ export default function StoryRepliesPage({
         ))}
       </div>
 
-      {/* 하단 입력창 */}
+      {/* 하단 입력 */}
       <div
         style={{
           position: "absolute",
@@ -274,7 +239,12 @@ export default function StoryRepliesPage({
             value={reply}
             onChange={(e) => setReply(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder="이 스토리에 답글을 다세요..."
+            placeholder={
+              stories.length
+                ? "이 스토리에 답글을 다세요..."
+                : "볼 스토리가 없어요"
+            }
+            disabled={!stories.length}
             style={{
               flex: 1,
               background: "transparent",
@@ -288,13 +258,14 @@ export default function StoryRepliesPage({
           />
           <button
             onClick={handleSend}
+            disabled={!stories.length}
             style={{
               border: "none",
               background: "transparent",
-              color: reply.trim() ? "#FF8C42" : "#5a5a5a",
+              color: reply.trim() && stories.length ? "#FF8C42" : "#5a5a5a",
               fontSize: 13,
               fontWeight: 700,
-              cursor: "pointer",
+              cursor: stories.length ? "pointer" : "default",
             }}
           >
             보내기
@@ -311,7 +282,7 @@ function StoryCard({ data, width = 297, height = 528, active, showToast }) {
   return (
     <div
       style={{
-        flex: "0 0 auto", // ⬅️ 줄어들지 않도록 고정
+        flex: "0 0 auto",
         width,
         height,
         position: "relative",
@@ -333,9 +304,9 @@ function StoryCard({ data, width = 297, height = 528, active, showToast }) {
           top: 22,
           display: "inline-flex",
           alignItems: "center",
-          gap: 4,
+          gap: 6,
           userSelect: "none",
-          whiteSpace: "nowrap", // ⬅️ 세로로 갈라지지 않도록
+          whiteSpace: "nowrap",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -361,14 +332,13 @@ function StoryCard({ data, width = 297, height = 528, active, showToast }) {
             fontSize: 12,
             fontWeight: 500,
             textShadow: "0 1px 2px rgba(0,0,0,.4)",
-            marginLeft: 6,
           }}
         >
           {data.timeAgo}
         </div>
       </div>
 
-      {/* 하단 캡션 말풍선 */}
+      {/* 하단 캡션 */}
       {data.caption && (
         <div
           style={{
