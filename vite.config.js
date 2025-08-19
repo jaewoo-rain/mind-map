@@ -81,7 +81,7 @@ export default defineConfig(({ mode }) => {
         includeAssets: ["image/*.png"],
         manifest: {
           name: "마인드맵 프로젝트",
-          short_name: "마인드맵",
+          short_name: "제주런",
           description: "위치 기반 마인드맵 서비스",
           theme_color: "#ffffff",
           background_color: "#ffffff",
