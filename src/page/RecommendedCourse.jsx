@@ -87,8 +87,8 @@ function levelByDistance(km) {
 }
 
 // ────────────────────────────────────────────────
-// 카드 (버튼만 클릭 가능)
-function CourseCard({ course, onRun }) {
+// 카드 (버튼만 클릭 가능, 활성 클래스 적용)
+function CourseCard({ course, onRun, active }) {
   const distKm = useMemo(() => {
     return getDistanceFromLatLonInKm(
       course.origin.lat,
@@ -102,7 +102,10 @@ function CourseCard({ course, onRun }) {
   const timeStr = estimateTimeStr(distKm);
 
   return (
-    <div className="course-card">
+    <div
+      className={`course-card${active ? " active" : ""}`}
+      aria-current={active ? "true" : "false"}
+    >
       <div className="cc-head">
         <div className="cc-thumb" />
         <div className="cc-meta">
@@ -180,7 +183,10 @@ export default function RecommendedCourse() {
   const [courses, setCourses] = useState([]);
   const [idx, setIdx] = useState(0);
   const selectedCourse = useMemo(
-    () => (courses.length ? courses[idx] : null),
+    () =>
+      courses.length
+        ? courses[Math.max(0, Math.min(idx, courses.length - 1))]
+        : null,
     [courses, idx]
   );
 
@@ -283,13 +289,6 @@ export default function RecommendedCourse() {
         const res = await fetch(JSON_URL);
         const data = await res.json();
 
-        const spotsByName = new Map(
-          (data.spots || []).map((s) => [
-            s.name,
-            { name: s.name, lat: s.lat, lng: s.lng },
-          ])
-        );
-
         const built = COURSES.map((course) => {
           const line = (data.lines || [])[course.id];
           if (!Array.isArray(line) || line.length < 2) return null;
@@ -366,8 +365,6 @@ export default function RecommendedCourse() {
             .filter((m) => !tooCloseM(m, origin) && !tooCloseM(m, dest))
             .slice(0, 2);
 
-          // 만약 spotNames(시작/끝 이름)가 spots에 필요하다면 여기선 쓰지 않음(요구사항: 시작/끝 제외)
-          // 카드/지도에는 midSpots만 노출
           return {
             id: `course_5_${course.id}`,
             title: course.title,
@@ -427,6 +424,7 @@ export default function RecommendedCourse() {
   useEffect(() => {
     if (!mapRef.current || !selectedCourse) return;
     drawCourse(selectedCourse);
+    // 현재 인덱스로 캐러셀도 맞춰두기(첫 로드 대비)
     requestAnimationFrame(() => centerToIndex(idx, false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCourse?.id, mapRef.current]);
@@ -636,7 +634,11 @@ export default function RecommendedCourse() {
               className="card-click-wrap"
               style={{ width: CARD_W }}
             >
-              <CourseCard course={c} onRun={handleStartRunning} />
+              <CourseCard
+                course={c}
+                onRun={handleStartRunning}
+                active={i === idx}
+              />
             </div>
           ))}
           <div className="end-spacer" />
