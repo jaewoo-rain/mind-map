@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./RecommendedCourse.css";
 import { getDistanceFromLatLonInKm } from "../utils/location.js";
 import AlertStart from "../components/AlertStart.jsx";
@@ -173,6 +174,7 @@ const COURSES = [
 ];
 
 export default function RecommendedCourse() {
+  const navigate = useNavigate();
   const NAVER_KEY = import.meta.env.VITE_NAVER_CLIENT_ID;
 
   // 코스 로딩
@@ -285,29 +287,29 @@ export default function RecommendedCourse() {
           ])
         );
 
-        const built = COURSES.map((p, i) => {
-          const line = (data.lines || [])[p.id];
+        const built = COURSES.map((course, i) => {
+          const line = (data.lines || [])[course.id];
           if (!Array.isArray(line) || line.length < 2) return null;
 
           const first = line[0]; // [lng,lat]
           const last = line[line.length - 1];
 
-          const pickSpots = (p.spotNames || [])
+          const pickSpots = (course.spotNames || [])
             .map((nm) => spotsByName.get(nm))
             .filter(Boolean);
 
           return {
-            id: `json5_${p.id}_${i}`,
-            title: p.title,
-            desc1: p.desc1,
-            desc2: p.desc2,
+            id: `course_5_${course.id}`,
+            title: course.title,
+            desc1: course.desc1,
+            desc2: course.desc2,
             origin: {
-              name: p.spotNames?.[0] || "출발지",
+              name: course.spotNames?.[0] || "출발지",
               lat: first[1],
               lng: first[0],
             },
             dest: {
-              name: p.spotNames?.[1] || "도착지",
+              name: course.spotNames?.[1] || "도착지",
               lat: last[1],
               lng: last[0],
             },
@@ -388,9 +390,18 @@ export default function RecommendedCourse() {
             start.lat,
             start.lng
           ) * 1000;
-        if (d <= 50) {
+        if (d >= 100) {
+          // 위치 조절하기
+          console.log(selectedCourse.id);
+          console.log(`${start.lat}, ${start.lng}`);
+
           setAlertComponent(
-            <AlertStart onClose={() => setAlertComponent(null)} />
+            <AlertStart
+              onClose={() => setAlertComponent(null)}
+              onStart={() =>
+                navigate("/run", { state: { courseId: selectedCourse.id } })
+              }
+            />
           );
         } else {
           setAlertComponent(

@@ -1,6 +1,6 @@
 import React from 'react';
 
-const AlertStart = ({ onClose }) => {
+const AlertStart = ({ onClose, onStart }) => {
     return (
         <div style={{
             position: 'fixed',
@@ -96,8 +96,11 @@ const AlertStart = ({ onClose }) => {
                         취소
                     </div>
 
-                    {/* 시작 버튼 (필요 시 onClick 연결해서 사용하세요) */}
+                    {/* 시작 버튼 */}
                     <div
+                        onClick={onStart}
+                        role="button"
+                        tabIndex={0}
                         style={{
                             width: 82.29,
                             left: 30.1,
@@ -109,7 +112,7 @@ const AlertStart = ({ onClose }) => {
                             fontFamily: 'Pretendard',
                             fontWeight: 700,
                             wordWrap: 'break-word',
-                            cursor: 'default',
+                            cursor: 'pointer',
                             userSelect: 'none',
                         }}
                     >
@@ -125,7 +128,7 @@ const AlertStart = ({ onClose }) => {
                 </div>
             </div>
         </div>
-    );
+    )
 };
 
 export default AlertStart;

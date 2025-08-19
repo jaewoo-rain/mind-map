@@ -9,6 +9,7 @@ import FinishRunningPage from "./page/FinishRunningPage";
 import MissionCertificate from "./page/MissionCertificatePage";
 import OnboardingFlow from "./page/onboarding/OnboardingFlow";
 import StoryRepliesRoute from "./page/Camera/StoryRepliesRoute";
+import RunningPage from "./page/RunningPage.jsx";
 
 // 홈: 1열 리스트 버튼
 function Home() {
@@ -129,6 +130,13 @@ function Home() {
             </span>
             온보딩페이지
           </button>
+
+          <button style={btn} onClick={() => navigate("/run")}>
+            <span style={emoji} aria-hidden>
+              🚀
+            </span>
+            러닝
+          </button>
         </div>
       </div>
     </div>
@@ -148,6 +156,7 @@ export default function App() {
       <Route path="/finish_run" element={<FinishRunningPage />} />
       <Route path="/onboard" element={<OnboardingFlow />} />
       <Route path="/mission" element={<MissionCertificate />} />
+      <Route path="/run" element={<RunningPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
