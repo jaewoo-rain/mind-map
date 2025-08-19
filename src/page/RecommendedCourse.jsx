@@ -1,6 +1,9 @@
 // src/MapPage.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./RecommendedCourse.css";
+import {getDistanceFromLatLonInKm} from "../utils/location.js";
+import AlertStart from "../components/AlertStart.jsx";
+import AlertNotStart from "../components/AlertNotStart.jsx";
 
 /**
  * 필요 .env
@@ -71,13 +74,13 @@ async function fetchTmapPedestrian({
 
 // ────────────────────────────────────────────────────────────────────────────────
 // 예시 코스 데이터
-const COURSES = [
+const COURSES = [ // 내꺼: 35.8368214, 127.1223943 함덕: 33.333918 126.256099
   {
     id: "c1",
     title: "아름다운 해변코스",
     desc1: "함덕해수욕장에서,",
     desc2: "000까지 가는 러닝 코스",
-    origin: { name: "시작점 이름", lat: 33.333918, lng: 126.256099 },
+    origin: { name: "시작점 이름", lat:  33.333918, lng: 126.256099 },
     dest: { name: "목적지 이름", lat: 33.346847, lng: 126.249495 },
     spots: [
       { name: "금오름", lat: 33.3396, lng: 126.2545 },
@@ -151,6 +154,9 @@ export default function RecommendedCourse() {
 
   // 오류 메시지
   const [msg, setMsg] = useState("");
+  
+  // 팝업 상태
+  const [alertComponent, setAlertComponent] = useState(null);
 
   // 지도/오버레이 레퍼런스
   const mapContainerRef = useRef(null);
@@ -342,6 +348,44 @@ export default function RecommendedCourse() {
     );
   };
 
+  // 위치  정보 처리
+  const handleStartRunning = () => {
+    setMsg("");
+    if (!navigator.geolocation) {
+      setMsg("이 브라우저는 위치 정보를 지원하지 않습니다.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        const currentLat = p.coords.latitude;
+        const currentLng = p.coords.longitude;
+        const courseStartLat = selectedCourse.origin.lat;
+        const courseStartLng = selectedCourse.origin.lng;
+
+        console.log("브라우저 현재 위치:", { lat: currentLat, lng: currentLng });
+        console.log("코스 시작 위치:", { lat: courseStartLat, lng: courseStartLng });
+
+        const distanceInKm = getDistanceFromLatLonInKm(
+          currentLat,
+          currentLng,
+          courseStartLat,
+          courseStartLng
+        );
+        const distanceInMeters = distanceInKm * 1000;
+
+        console.log("계산된 거리 (미터):", distanceInMeters);
+
+        if (distanceInMeters <= 50) {
+          setAlertComponent(<AlertStart onClose={() => setAlertComponent(null)} />);
+        } else {
+          setAlertComponent(<AlertNotStart onClose={() => setAlertComponent(null)} />);
+        }
+      },
+      (e) => setMsg(e.message || "내 위치를 가져오지 못했어요."),
+      { enableHighAccuracy: true }
+    );
+  };
+
   // ────────────────────────────────────────────────────────────────────────────
   // 지도 오버레이 관리 & 코스 그리기
   function clearOverlays() {
@@ -481,11 +525,12 @@ export default function RecommendedCourse() {
       <div className="bottom-bar">
         <button
           className="btn primary"
-          onClick={() => console.log("start with course:", selectedCourse)}
+          onClick={handleStartRunning}
         >
           이 코스로 달리기
         </button>
       </div>
+      {alertComponent}
     </div>
   );
 }

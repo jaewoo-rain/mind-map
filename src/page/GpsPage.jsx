@@ -18,8 +18,8 @@ const GpsPage = () => {
 
     // 목표 위치 좌표
     const targetLocation = {
-        latitude: 35.8416384,
-        longitude: 127.1595008
+        latitude: 35.8350848,
+        longitude: 127.1169024
     };
     // 알림을 발생시킬 거리 (미터 단위)
     const DISTANCE_THRESHOLD_METERS = 50;
