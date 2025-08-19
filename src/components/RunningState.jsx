@@ -6,6 +6,8 @@ const RunningState = () => {
     const [startTime] = useState(new Date());
     const [elapsedTime, setElapsedTime] = useState(0);
     const [distance, setDistance] = useState(0);
+    const [calories, setCalories] = useState(0);
+    const [pace, setPace] = useState(0);
     const [prevLocation, setPrevLocation] = useState(null);
     const { location } = useWatchLocation();
 
@@ -26,16 +28,32 @@ const RunningState = () => {
                 location.latitude,
                 location.longitude
             );
-            setDistance((prevDistance) => prevDistance + newDistance);
+            const newTotalDistance = distance + newDistance;
+            setDistance(newTotalDistance);
+            setCalories(newTotalDistance * 65); // Assuming average weight of 65kg
+
+            if (newTotalDistance > 0) {
+                const paceInMinutes = (elapsedTime / 60) / newTotalDistance;
+                setPace(paceInMinutes);
+            }
         }
         setPrevLocation(location);
-    }, [location, prevLocation]);
+    }, [location, prevLocation, distance, elapsedTime]);
 
     const formatTime = (timeInSeconds) => {
         const hours = Math.floor(timeInSeconds / 3600).toString().padStart(2, '0');
         const minutes = Math.floor((timeInSeconds % 3600) / 60).toString().padStart(2, '0');
         const seconds = (timeInSeconds % 60).toString().padStart(2, '0');
         return `${hours}:${minutes}:${seconds}`;
+    };
+
+    const formatPace = (paceInMinutes) => {
+        if (paceInMinutes === 0 || !isFinite(paceInMinutes)) {
+            return "0'00''";
+        }
+        const minutes = Math.floor(paceInMinutes);
+        const seconds = Math.round((paceInMinutes - minutes) * 60).toString().padStart(2, '0');
+        return `${minutes}'${seconds}''`;
     };
 
     return (
@@ -199,7 +217,7 @@ const RunningState = () => {
                                 fontWeight: '600',
                                 color: '#3A3A3C',
                                 fontFamily: 'Pretendard',
-                            }}>139
+                            }}>{Math.round(calories)}
                             </div>
                             <div style={{
                                 opacity: 0.70,
@@ -229,7 +247,7 @@ const RunningState = () => {
                                 fontWeight: '600',
                                 color: '#3A3A3C',
                                 fontFamily: 'Pretendard',
-                            }}>9’01’’
+                            }}>{formatPace(pace)}
                             </div>
                             <div style={{
                                 opacity: 0.70,
