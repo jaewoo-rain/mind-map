@@ -125,10 +125,10 @@
 }
 .carousel {
   display: flex;
-  gap: 12px;
+  gap: 18px;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 0 16px 12px;
+  padding: 12px 12px 12px;
   -webkit-overflow-scrolling: touch;
   scroll-snap-type: none; /* 스냅은 JS로 처리 */
   touch-action: pan-x; /* 가로 스크롤 제스처 */
@@ -166,9 +166,10 @@
   transition: outline-color 0.2s, box-shadow 0.2s, transform 0.2s, opacity 0.2s;
 }
 .course-card.active {
-  outline: 2px solid var(--main);
+  /* outline: 2px solid var(--main); */
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
-  transform: translateY(-1px);
+  transform: translateY(-1px) scale(1.08);
+  z-index: 2;
 }
 
 .cc-head {
