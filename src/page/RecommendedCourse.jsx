@@ -149,13 +149,12 @@ const JSON_URL = "/data/course_bundles/course_5.json";
 
 // 하드코딩으로 선택할 라인들(스팟 포함되는 라인)
 const COURSES = [
-  // 각 라인 인덱스 + 카드에 쓸 더미 텍스트 + 보여줄 스팟명(최대 2개)
   {
     id: 3,
     title: "남원 바닷길 러닝",
     desc1: "남원용암해수풀장에서,",
     desc2: "큰엉까지 잔잔한 오션뷰",
-    spotNames: ["남원용암해수풀장", "큰엉입구"],
+    spotNames: ["남원용암해수풀장", "큰엉입구"], // 출/도착(표시용 이름)
   },
   {
     id: 2,
@@ -264,7 +263,6 @@ export default function RecommendedCourse() {
     setIdx((prev) => {
       const i = currentIndexByCenter();
       return i !== prev ? i : prev;
-      // 스냅은 아래 타이머에서
     });
     clearTimeout(idleTimer.current);
     idleTimer.current = setTimeout(() => {
@@ -272,9 +270,14 @@ export default function RecommendedCourse() {
     }, 90);
   };
 
-  // ── JSON 로딩 → 라인 3개를 코스로 구성
+  // ── JSON 로딩 → 라인 3개를 코스로 구성 (+ 경로 중간 스팟 2개만 뽑기: 시작/끝 제외)
   useEffect(() => {
     let cancelled = false;
+
+    const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+    const tooCloseM = (a, b, m = 80) =>
+      getDistanceFromLatLonInKm(a.lat, a.lng, b.lat, b.lng) * 1000 < m;
+
     (async () => {
       try {
         const res = await fetch(JSON_URL);
@@ -287,34 +290,92 @@ export default function RecommendedCourse() {
           ])
         );
 
-        const built = COURSES.map((course, i) => {
+        const built = COURSES.map((course) => {
           const line = (data.lines || [])[course.id];
           if (!Array.isArray(line) || line.length < 2) return null;
 
-          const first = line[0]; // [lng,lat]
+          // 출발/도착 좌표
+          const first = line[0]; // [lng, lat]
           const last = line[line.length - 1];
 
-          const pickSpots = (course.spotNames || [])
-            .map((nm) => spotsByName.get(nm))
-            .filter(Boolean);
+          const origin = {
+            name: course.spotNames?.[0] || "출발지",
+            lat: first[1],
+            lng: first[0],
+          };
+          const dest = {
+            name: course.spotNames?.[1] || "도착지",
+            lat: last[1],
+            lng: last[0],
+          };
 
+          // JSON에 line_mid_spots가 있으면 우선 사용
+          let midsFromFile =
+            data.line_mid_spots?.[String(course.id)]?.map((s) => ({
+              name: s.name,
+              lat: s.lat,
+              lng: s.lng,
+            })) ?? [];
+
+          // 폴백: 라인 기반 자동 산출(33%, 50%, 66% 후보 중 2개 선택)
+          const autoMid = () => {
+            const picks = [0.33, 0.5, 0.66]
+              .map((t) =>
+                clamp(Math.floor(line.length * t), 5, line.length - 6)
+              )
+              .filter((v, i, arr) => arr.indexOf(v) === i);
+            const result = [];
+            for (const idx of picks) {
+              const [lng, lat] = line[idx];
+              const cand = {
+                name: `중간 스팟 ${result.length + 1}`,
+                lat,
+                lng,
+              };
+              if (
+                !tooCloseM(cand, origin) &&
+                !tooCloseM(cand, dest) &&
+                result.every((r) => !tooCloseM(cand, r, 50))
+              ) {
+                result.push(cand);
+              }
+              if (result.length === 2) break;
+            }
+            // 혹시 부족하면 중앙 쪽에서 보충
+            if (result.length < 2) {
+              const midIdx = clamp(
+                Math.floor(line.length * 0.5),
+                5,
+                line.length - 6
+              );
+              const [lng, lat] = line[midIdx];
+              const cand = { name: `중간 스팟 ${result.length + 1}`, lat, lng };
+              if (
+                !tooCloseM(cand, origin) &&
+                !tooCloseM(cand, dest) &&
+                result.every((r) => !tooCloseM(cand, r, 50))
+              ) {
+                result.push(cand);
+              }
+            }
+            return result.slice(0, 2);
+          };
+
+          let midSpots = (midsFromFile.length >= 2 ? midsFromFile : autoMid())
+            // 시작/끝과 너무 가까운 것은 제외
+            .filter((m) => !tooCloseM(m, origin) && !tooCloseM(m, dest))
+            .slice(0, 2);
+
+          // 만약 spotNames(시작/끝 이름)가 spots에 필요하다면 여기선 쓰지 않음(요구사항: 시작/끝 제외)
+          // 카드/지도에는 midSpots만 노출
           return {
             id: `course_5_${course.id}`,
             title: course.title,
             desc1: course.desc1,
             desc2: course.desc2,
-            origin: {
-              name: course.spotNames?.[0] || "출발지",
-              lat: first[1],
-              lng: first[0],
-            },
-            dest: {
-              name: course.spotNames?.[1] || "도착지",
-              lat: last[1],
-              lng: last[0],
-            },
-            spots: pickSpots,
-            // 지도에 바로 그리도록 JSON 라인 좌표를 path 로 보관
+            origin,
+            dest,
+            spots: midSpots, // ★ 중간 스팟만
             path: line.map(([lng, lat]) => ({ lat, lng })),
           };
         }).filter(Boolean);
@@ -325,6 +386,7 @@ export default function RecommendedCourse() {
         if (!cancelled) setMsg("코스 데이터를 불러오지 못했어요.");
       }
     })();
+
     return () => {
       cancelled = true;
     };
@@ -391,10 +453,6 @@ export default function RecommendedCourse() {
             start.lng
           ) * 1000;
         if (d >= 100) {
-          // 위치 조절하기
-          console.log(selectedCourse.id);
-          console.log(`${start.lat}, ${start.lng}`);
-
           setAlertComponent(
             <AlertStart
               onClose={() => setAlertComponent(null)}
@@ -536,7 +594,7 @@ export default function RecommendedCourse() {
     );
     overlaysRef.current.markers.push(startMarker, goalMarker);
 
-    // 스팟
+    // 중간 스팟(2개만)
     (course.spots || []).forEach((s) => {
       const mk = makeSpotMarker(new naver.maps.LatLng(s.lat, s.lng), s.name);
       overlaysRef.current.markers.push(mk);
