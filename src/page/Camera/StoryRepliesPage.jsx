@@ -1,30 +1,38 @@
-// src/components/StoryRepliesPage.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
 export default function StoryRepliesPage({
   locationName = "함덕해수욕장",
-  myStory, // {author, avatar, timeAgo, photo, caption}
-  others = [], // [{id, author, avatar, timeAgo, photo, caption}]
+  myStory,
+  others = [],
 }) {
   const containerRef = useRef(null);
   const [active, setActive] = useState(0);
   const [reply, setReply] = useState("");
   const [sentToastFor, setSentToastFor] = useState(null);
 
-  // 카드/레이아웃
-  const CARD_W = 297;
-  const CARD_H = 528;
-  const GAP = 16;
-
-  // 컨테이너 폭 기반 좌우 패딩 계산(중앙 정렬)
+  // 카드/레이아웃 동적 계산
+  const [cardW, setCardW] = useState(297);
+  const [cardH, setCardH] = useState(528);
+  const [gap, setGap] = useState(16);
   const [sidePad, setSidePad] = useState(32);
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const calc = () => {
-      const w = el.clientWidth || 360;
-      const pad = Math.max((w - CARD_W) / 2, 16);
+      const w = el.clientWidth || window.innerWidth || 360;
+      const h = el.clientHeight || 528;
+
+      // 컨테이너 높이에 맞춘 16:9 카드
+      const targetH = h; // 전체 높이 채우기
+      const targetW = Math.min(Math.round((targetH * 9) / 16), w - 32);
+      const pad = Math.max((w - targetW) / 2, 16);
+
+      setCardH(targetH);
+      setCardW(targetW);
+      setGap(16);
       setSidePad(pad);
+
       el.style.scrollPaddingLeft = `${pad}px`;
       el.style.scrollPaddingRight = `${pad}px`;
     };
@@ -32,13 +40,14 @@ export default function StoryRepliesPage({
     const ro = new ResizeObserver(calc);
     ro.observe(el);
     window.addEventListener("orientationchange", calc);
+    window.addEventListener("resize", calc);
     return () => {
       ro.disconnect();
       window.removeEventListener("orientationchange", calc);
+      window.removeEventListener("resize", calc);
     };
   }, []);
 
-  // 🔹 라우트/부모가 준 데이터만 사용
   const stories = useMemo(() => {
     const arr = [];
     if (myStory) arr.push({ id: "me", ...myStory });
@@ -58,7 +67,7 @@ export default function StoryRepliesPage({
         let idx = 0;
         let best = Infinity;
         for (let i = 0; i < stories.length; i++) {
-          const left = sidePad + i * (CARD_W + GAP) + CARD_W / 2;
+          const left = sidePad + i * (cardW + gap) + cardW / 2;
           const dist = Math.abs(center - left);
           if (dist < best) {
             best = dist;
@@ -74,7 +83,7 @@ export default function StoryRepliesPage({
       cancelAnimationFrame(raf);
       el.removeEventListener("scroll", onScroll);
     };
-  }, [stories.length, sidePad]);
+  }, [stories.length, sidePad, cardW, gap]);
 
   const handleSend = () => {
     if (!reply.trim() || !stories.length) return;
@@ -85,21 +94,21 @@ export default function StoryRepliesPage({
     setTimeout(() => setSentToastFor(null), 1500);
   };
 
-  // ---------- 스타일 ----------
+  // ---------- 스타일 (반응형) ----------
   const root = {
-    width: 360,
-    height: 800,
-    position: "relative",
+    position: "fixed",
+    inset: 0,
+    width: "100vw",
+    height: "100dvh",
     background: "black",
     overflow: "hidden",
-    margin: "20px auto",
   };
   const statusBar = {
-    width: 360,
-    height: 44,
     position: "absolute",
     left: 0,
     top: 0,
+    width: "100%",
+    height: 44,
     background: "black",
     color: "white",
     display: "flex",
@@ -108,17 +117,6 @@ export default function StoryRepliesPage({
     boxSizing: "border-box",
     fontWeight: 600,
     zIndex: 5,
-  };
-  const homeIndicator = {
-    width: 129,
-    height: 4.5,
-    left: 244.5,
-    top: 776,
-    position: "absolute",
-    transform: "rotate(180deg)",
-    transformOrigin: "top left",
-    background: "white",
-    borderRadius: 90,
   };
   const header = {
     position: "absolute",
@@ -153,6 +151,16 @@ export default function StoryRepliesPage({
       />
     </div>
   );
+  const homeIndicator = {
+    position: "absolute",
+    bottom: 8,
+    left: "50%",
+    transform: "translateX(-50%)",
+    width: 129,
+    height: 4.5,
+    background: "white",
+    borderRadius: 90,
+  };
 
   return (
     <div style={root}>
@@ -167,17 +175,17 @@ export default function StoryRepliesPage({
         </div>
       </div>
 
-      {/* 카드 가로 스크롤 */}
+      {/* 카드 가로 스크롤: 상단/하단 고정 영역 사이를 꽉 채움 */}
       <div
         ref={containerRef}
         style={{
           position: "absolute",
           left: 0,
+          right: 0,
           top: 123,
-          width: 360,
-          height: CARD_H,
+          bottom: 150, // 하단 입력 영역 높이 확보
           display: "flex",
-          gap: GAP,
+          gap,
           padding: `0 ${sidePad}px`,
           overflowX: "auto",
           overflowY: "hidden",
@@ -190,8 +198,8 @@ export default function StoryRepliesPage({
           <StoryCard
             key={s.id || i}
             data={s}
-            width={CARD_W}
-            height={CARD_H}
+            width={cardW}
+            height={cardH}
             active={i === active}
             showToast={sentToastFor === (s.id || i)}
           />
@@ -203,11 +211,11 @@ export default function StoryRepliesPage({
         style={{
           position: "absolute",
           left: 16,
+          right: 16,
           bottom: 58,
-          display: "inline-flex",
+          display: "flex",
           alignItems: "flex-end",
           gap: 7,
-          width: 328,
         }}
       >
         <div
@@ -216,11 +224,12 @@ export default function StoryRepliesPage({
             height: 42,
             background: "#D9D9D9",
             borderRadius: 9999,
+            flex: "0 0 auto",
           }}
         />
         <div
           style={{
-            width: 279,
+            flex: 1,
             height: 42,
             position: "relative",
             background: "black",
@@ -278,7 +287,7 @@ export default function StoryRepliesPage({
   );
 }
 
-function StoryCard({ data, width = 297, height = 528, active, showToast }) {
+function StoryCard({ data, width, height, active, showToast }) {
   return (
     <div
       style={{
