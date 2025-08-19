@@ -12,14 +12,14 @@
   box-sizing: border-box;
 }
 
-/* 프리뷰용 화면 크기 */
+/* 화면 전체를 뷰포트로 채움 (고정 360x800 제거) */
 .screen {
-  position: relative;
-  width: 360px;
-  height: 800px;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh; /* 모바일 주소창 변화 대응 */
   background: var(--bg);
   overflow: hidden;
-  border-radius: 16px;
 }
 
 /* ───────── AppBar */
@@ -36,7 +36,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  top: 50px;
+  top: 40px;
   text-align: center;
   font-family: Pretendard, system-ui, sans-serif;
   font-size: 16px;
@@ -49,7 +49,7 @@
   left: 0;
   right: 0;
   top: 94px;
-  bottom: 12px; /* 하단 바 제거 → 여백만 */
+  bottom: 12px; /* 아래 캐러셀과 겹쳐 보여도 OK (지도 넓게) */
 }
 
 /* 지도 위 토스트 */
@@ -78,8 +78,8 @@
   height: 28px;
 }
 .marker-loc {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   display: block;
 }
 .marker-label {
@@ -99,8 +99,8 @@
   left: 36px;
 }
 .marker-spot {
-  width: 22px;
-  height: 22px;
+  width: 33px;
+  height: 42px;
   display: block;
 }
 
@@ -117,7 +117,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 12px;
+  bottom: max(env(safe-area-inset-bottom) + 50px); /* 세이프에어리어 대응 */
   height: 170px;
   display: flex;
   align-items: center;
@@ -129,13 +129,11 @@
   overflow-x: auto;
   overflow-y: hidden;
   padding: 0 16px 12px;
-  /* 네이티브 스크롤의 자연스러움 그대로 */
   -webkit-overflow-scrolling: touch;
-  /* snap은 JS로 처리 → 중복 방지 위해 끔 */
-  scroll-snap-type: none;
-  /* 기본 터치 제스처 허용 */
-  touch-action: auto;
+  scroll-snap-type: none; /* 스냅은 JS로 처리 */
+  touch-action: pan-x; /* 가로 스크롤 제스처 */
 }
+/* 스크롤바 숨김 */
 .carousel {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -165,9 +163,12 @@
   outline: none;
   user-select: none;
   cursor: default; /* 카드 자체는 클릭 없음 */
+  transition: outline-color 0.2s, box-shadow 0.2s, transform 0.2s, opacity 0.2s;
 }
 .course-card.active {
   outline: 2px solid var(--main);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
 }
 
 .cc-head {
