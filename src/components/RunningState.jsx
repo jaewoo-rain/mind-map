@@ -1,4 +1,25 @@
+import { useState, useEffect } from 'react';
+
 const RunningState = () => {
+    const [startTime] = useState(new Date());
+    const [elapsedTime, setElapsedTime] = useState(0);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            const now = new Date();
+            setElapsedTime(Math.round((now - startTime) / 1000));
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [startTime]);
+
+    const formatTime = (timeInSeconds) => {
+        const hours = Math.floor(timeInSeconds / 3600).toString().padStart(2, '0');
+        const minutes = Math.floor((timeInSeconds % 3600) / 60).toString().padStart(2, '0');
+        const seconds = (timeInSeconds % 60).toString().padStart(2, '0');
+        return `${hours}:${minutes}:${seconds}`;
+    };
+
     return (
         // paddingTop으로 버튼을 위한 공간을 확보하고, 컨테이너 높이는 카드 콘텐츠에 따라 결정됩니다.
         <div style={{width: '100%', position: 'relative', paddingTop: 30}}>
@@ -93,7 +114,7 @@ const RunningState = () => {
                         fontWeight: '600',
                         letterSpacing: 0.36,
                         wordWrap: 'break-word'
-                    }}>01:09:44
+                    }}>{formatTime(elapsedTime)}
                     </div>
                 </div>
                 <div style={{
