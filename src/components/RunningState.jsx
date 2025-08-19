@@ -3,25 +3,26 @@ import useWatchLocation from '../hooks/useWatchLocation';
 import { getDistanceFromLatLonInKm } from '../utils/location';
 
 const RunningState = () => {
-    const [startTime] = useState(new Date());
     const [elapsedTime, setElapsedTime] = useState(0);
     const [distance, setDistance] = useState(0);
     const [calories, setCalories] = useState(0);
     const [pace, setPace] = useState(0);
     const [prevLocation, setPrevLocation] = useState(null);
+    const [isPaused, setIsPaused] = useState(false);
     const { location } = useWatchLocation();
 
     useEffect(() => {
-        const timer = setInterval(() => {
-            const now = new Date();
-            setElapsedTime(Math.round((now - startTime) / 1000));
-        }, 1000);
-
+        let timer;
+        if (!isPaused) {
+            timer = setInterval(() => {
+                setElapsedTime(prevTime => prevTime + 1);
+            }, 1000);
+        }
         return () => clearInterval(timer);
-    }, [startTime]);
+    }, [isPaused]);
 
     useEffect(() => {
-        if (location && prevLocation) {
+        if (!isPaused && location && prevLocation) {
             const newDistance = getDistanceFromLatLonInKm(
                 prevLocation.latitude,
                 prevLocation.longitude,
@@ -38,7 +39,7 @@ const RunningState = () => {
             }
         }
         setPrevLocation(location);
-    }, [location, prevLocation, distance, elapsedTime]);
+    }, [location, prevLocation, elapsedTime, isPaused, distance]);
 
     const formatTime = (timeInSeconds) => {
         const hours = Math.floor(timeInSeconds / 3600).toString().padStart(2, '0');
@@ -56,11 +57,15 @@ const RunningState = () => {
         return `${minutes}'${seconds}''`;
     };
 
+    const togglePause = () => {
+        setIsPaused(!isPaused);
+    };
+
     return (
         // paddingTop으로 버튼을 위한 공간을 확보하고, 컨테이너 높이는 카드 콘텐츠에 따라 결정됩니다.
         <div style={{width: '100%', position: 'relative', paddingTop: 30}}>
             {/* 버튼들은 오른쪽 상단에 절대 위치로 고정됩니다. */}
-            <div style={{width: 60, height: 60, right: 80, top: 0, position: 'absolute'}}>
+            <div onClick={togglePause} style={{width: 60, height: 60, right: 80, top: 0, position: 'absolute', cursor: 'pointer'}}>
                 <div style={{
                     width: 60,
                     height: 60,
@@ -77,7 +82,8 @@ const RunningState = () => {
                     top: 18,
                     position: 'absolute',
                     background: '#FCFCFC',
-                    borderRadius: 4.50
+                    borderRadius: 4.50,
+                    display: isPaused ? 'none' : 'block'
                 }}/>
                 <div style={{
                     width: 3.75,
@@ -86,8 +92,21 @@ const RunningState = () => {
                     top: 18,
                     position: 'absolute',
                     background: '#FCFCFC',
-                    borderRadius: 4.50
+                    borderRadius: 4.50,
+                    display: isPaused ? 'none' : 'block'
                 }}/>
+                {isPaused && (
+                    <div style={{
+                        width: 0, 
+                        height: 0, 
+                        borderTop: '12px solid transparent',
+                        borderBottom: '12px solid transparent',
+                        borderLeft: '20px solid #FCFCFC',
+                        position: 'absolute',
+                        left: 22,
+                        top: 18
+                    }}/>
+                )}
             </div>
             <div style={{width: 60, height: 60, right: 10, top: 0, position: 'absolute'}}>
                 <div style={{
