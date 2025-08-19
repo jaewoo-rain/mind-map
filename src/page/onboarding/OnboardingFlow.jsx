@@ -1,6 +1,7 @@
 // src/OnboardingFlow.jsx
 import React, { useMemo, useState } from "react";
-import NicknamePage from "./NickNamePage";
+
+import NicknamePage from "./NickNamePage.jsx";
 import GenderAgePage from "./GenderAgePage";
 import TravelPreferencePage from "./TravelPreferencePage";
 import RegionSelectPage from "./RegionSelectPage";
