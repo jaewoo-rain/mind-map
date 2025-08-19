@@ -1,45 +1,14 @@
-import { useState, useEffect } from 'react';
-import useWatchLocation from '../hooks/useWatchLocation';
-import { getDistanceFromLatLonInKm } from '../utils/location';
+import React from 'react';
 
-const RunningState = () => {
-    const [elapsedTime, setElapsedTime] = useState(0);
-    const [distance, setDistance] = useState(0);
-    const [calories, setCalories] = useState(0);
-    const [pace, setPace] = useState(0);
-    const [prevLocation, setPrevLocation] = useState(null);
-    const [isPaused, setIsPaused] = useState(false);
-    const { location } = useWatchLocation();
-
-    useEffect(() => {
-        let timer;
-        if (!isPaused) {
-            timer = setInterval(() => {
-                setElapsedTime(prevTime => prevTime + 1);
-            }, 1000);
-        }
-        return () => clearInterval(timer);
-    }, [isPaused]);
-
-    useEffect(() => {
-        if (!isPaused && location && prevLocation) {
-            const newDistance = getDistanceFromLatLonInKm(
-                prevLocation.latitude,
-                prevLocation.longitude,
-                location.latitude,
-                location.longitude
-            );
-            const newTotalDistance = distance + newDistance;
-            setDistance(newTotalDistance);
-            setCalories(newTotalDistance * 65); // Assuming average weight of 65kg
-
-            if (newTotalDistance > 0) {
-                const paceInMinutes = (elapsedTime / 60) / newTotalDistance;
-                setPace(paceInMinutes);
-            }
-        }
-        setPrevLocation(location);
-    }, [location, prevLocation, elapsedTime, isPaused, distance]);
+const RunningState = ({ 
+    elapsedTime, 
+    distance, 
+    calories, 
+    pace, 
+    isPaused, 
+    onStopClick, 
+    togglePause 
+}) => {
 
     const formatTime = (timeInSeconds) => {
         const hours = Math.floor(timeInSeconds / 3600).toString().padStart(2, '0');
@@ -57,12 +26,7 @@ const RunningState = () => {
         return `${minutes}'${seconds}''`;
     };
 
-    const togglePause = () => {
-        setIsPaused(!isPaused);
-    };
-
     return (
-        // paddingTop으로 버튼을 위한 공간을 확보하고, 컨테이너 높이는 카드 콘텐츠에 따라 결정됩니다.
         <div style={{width: '100%', position: 'relative', paddingTop: 30}}>
             {/* 버튼들은 오른쪽 상단에 절대 위치로 고정됩니다. */}
             <div onClick={togglePause} style={{width: 60, height: 60, right: 80, top: 0, position: 'absolute', cursor: 'pointer'}}>
@@ -108,7 +72,7 @@ const RunningState = () => {
                     }}/>
                 )}
             </div>
-            <div style={{width: 60, height: 60, right: 10, top: 0, position: 'absolute'}}>
+            <div onClick={onStopClick} style={{width: 60, height: 60, right: 10, top: 0, position: 'absolute', cursor: 'pointer'}}>
                 <div style={{
                     width: 60,
                     height: 60,

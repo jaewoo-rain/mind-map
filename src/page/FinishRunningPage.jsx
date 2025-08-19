@@ -1,7 +1,28 @@
 // src/RunningCoursePage.jsx
 import React from "react";
+import { useLocation } from "react-router-dom";
+
+const formatTime = (timeInSeconds) => {
+    if (timeInSeconds === undefined || timeInSeconds === null) return "00:00:00";
+    const hours = Math.floor(timeInSeconds / 3600).toString().padStart(2, '0');
+    const minutes = Math.floor((timeInSeconds % 3600) / 60).toString().padStart(2, '0');
+    const seconds = (timeInSeconds % 60).toString().padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+};
+
+const formatPace = (paceInMinutes) => {
+    if (paceInMinutes === undefined || paceInMinutes === null || paceInMinutes === 0 || !isFinite(paceInMinutes)) {
+        return "0'00''";
+    }
+    const minutes = Math.floor(paceInMinutes);
+    const seconds = Math.round((paceInMinutes - minutes) * 60).toString().padStart(2, '0');
+    return `${minutes}'${seconds}''`;
+};
 
 export default function FinishRunningPage() {
+  const location = useLocation();
+  const { elapsedTime, distance, calories, pace } = location.state || { elapsedTime: 0, distance: 0, calories: 0, pace: 0 };
+
   return (
     <div
       style={{
@@ -53,7 +74,7 @@ export default function FinishRunningPage() {
               }}
             >
               <div style={{ color: "black", fontSize: 64, fontWeight: 900 }}>
-                3.57
+                {distance.toFixed(2)}
               </div>
               <div style={{ color: "#C4C4C6", fontSize: 12 }}>킬로미터</div>
             </div>
@@ -63,7 +84,7 @@ export default function FinishRunningPage() {
                 <div
                   style={{ color: "#1E1E22", fontSize: 22, fontWeight: 600 }}
                 >
-                  9’01’’
+                  {formatPace(pace)}
                 </div>
                 <div style={{ color: "#C4C4C6", fontSize: 12 }}>페이스</div>
               </div>
@@ -71,7 +92,7 @@ export default function FinishRunningPage() {
                 <div
                   style={{ color: "#1E1E22", fontSize: 22, fontWeight: 600 }}
                 >
-                  31:16
+                  {formatTime(elapsedTime)}
                 </div>
                 <div style={{ color: "#C4C4C6", fontSize: 12 }}>시간</div>
               </div>
@@ -79,7 +100,7 @@ export default function FinishRunningPage() {
                 <div
                   style={{ color: "#1E1E22", fontSize: 22, fontWeight: 600 }}
                 >
-                  186
+                  {Math.round(calories)}
                 </div>
                 <div style={{ color: "#C4C4C6", fontSize: 12 }}>칼로리</div>
               </div>

@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import "./MapPage.css";
 import { getDistanceFromLatLonInKm } from "../utils/location.js";
 import AlertArrive from "../components/AlertArrive.jsx";
 import RunningState from "../components/RunningState.jsx";
+import AlertEnd from "../components/AlertEnd.jsx";
+import useWatchLocation from "../hooks/useWatchLocation.js";
 
 const NAVER_KEY = import.meta.env.VITE_NAVER_CLIENT_ID;
 
@@ -55,6 +57,7 @@ function parseCourseId(raw) {
 
 export default function RunningPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   // RecommendedCourse에서 navigate("/run", { state: { courseId } })
   const { fileNo, lineIndex } = parseCourseId(location.state?.courseId);
 
@@ -64,11 +67,54 @@ export default function RunningPage() {
   const [poiList, setPoiList] = useState([]); // [{name,lat,lng}]
   const [visitedSpots, setVisitedSpots] = useState(new Set());
   const [arrivalAlert, setArrivalAlert] = useState(null);
+  const [showEndAlert, setShowEndAlert] = useState(false);
+
+  // RunningState state
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [distance, setDistance] = useState(0);
+  const [calories, setCalories] = useState(0);
+  const [pace, setPace] = useState(0);
+  const [prevLocation, setPrevLocation] = useState(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const { location: currentLocation } = useWatchLocation();
 
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const polyRef = useRef(null);
   const markersRef = useRef({ start: null, end: null, me: null, poi: [] });
+
+  // Timer effect
+  useEffect(() => {
+    let timer;
+    if (!isPaused && !showEndAlert) {
+        timer = setInterval(() => {
+            setElapsedTime(prevTime => prevTime + 1);
+        }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [isPaused, showEndAlert]);
+
+  // Location tracking and calculation effect
+  useEffect(() => {
+    if (!isPaused && !showEndAlert && currentLocation && prevLocation) {
+        const newDistance = getDistanceFromLatLonInKm(
+            prevLocation.latitude,
+            prevLocation.longitude,
+            currentLocation.latitude,
+            currentLocation.longitude
+        );
+        const newTotalDistance = distance + newDistance;
+        setDistance(newTotalDistance);
+        setCalories(newTotalDistance * 65); // Assuming average weight of 65kg
+
+        if (newTotalDistance > 0) {
+            const paceInMinutes = (elapsedTime / 60) / newTotalDistance;
+            setPace(paceInMinutes);
+        }
+    }
+    setPrevLocation(currentLocation);
+  }, [currentLocation, prevLocation, elapsedTime, isPaused, showEndAlert, distance]);
+
 
   // 1) 코스 JSON 로드 후, 특정 라인만 선택
   useEffect(() => {
@@ -246,6 +292,25 @@ export default function RunningPage() {
     };
   }, [poiList, visitedSpots, arrivalAlert]);
 
+  const handleStopClick = () => {
+    setShowEndAlert(true);
+  };
+
+  const handleCloseEndAlert = () => {
+    setShowEndAlert(false);
+  };
+
+  const handleEndRunning = () => {
+    setShowEndAlert(false);
+    navigate('/finish_run', {
+        state: { elapsedTime, distance, calories, pace } 
+    });
+  };
+
+  const togglePause = () => {
+    setIsPaused(!isPaused);
+  };
+
   return (
     <div className="screen">
       <div ref={mapContainerRef} className="map-container" />
@@ -266,8 +331,17 @@ export default function RunningPage() {
         </div>
       )}
       {arrivalAlert}
+      {showEndAlert && <AlertEnd onClose={handleCloseEndAlert} onEnd={handleEndRunning} />}
       <div style={{ position: 'absolute', bottom: '5%', left: '50%', transform: 'translateX(-50%)', zIndex: 100 }}>
-        <RunningState />
+        <RunningState 
+            onStopClick={handleStopClick} 
+            isPaused={isPaused}
+            togglePause={togglePause}
+            elapsedTime={elapsedTime}
+            distance={distance}
+            calories={calories}
+            pace={pace}
+        />
       </div>
     </div>
   );
