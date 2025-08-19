@@ -66,7 +66,7 @@ import { VitePWA } from "vite-plugin-pwa";
 
 const TUNNEL_HOST =
   process.env.CF_TUNNEL_HOST ||
-  "howard-flights-ict-antarctica.trycloudflare.com";
+  "julie-detected-learn-houston.trycloudflare.com";
 
 export default defineConfig(({ mode }) => {
   loadEnv(mode, process.cwd(), ""); // 프론트 번들에 노출될 값은 VITE_ 접두사만
@@ -80,14 +80,26 @@ export default defineConfig(({ mode }) => {
         workbox: { globPatterns: ["**/*.{js,css,html,ico,png,svg}"] },
         includeAssets: ["image/*.png"],
         manifest: {
-          name: "테스트용 리액트앱",
-          short_name: "MyApp",
-          description: "설명",
-          theme_color: "#000000",
-          background_color: "#000000",
+          name: "마인드맵 프로젝트",
+          short_name: "마인드맵",
+          description: "위치 기반 마인드맵 서비스",
+          theme_color: "#ffffff",
+          background_color: "#ffffff",
           display: "standalone",
-          start_url: ".",
-          scope: ".",
+          start_url: "/",
+          scope: "/",
+          icons: [
+            {
+              src: "/check.png",
+              sizes: "192x192",
+              type: "image/png",
+            },
+            {
+              src: "/photoshoot.png",
+              sizes: "512x512",
+              type: "image/png",
+            },
+          ],
         },
       }),
     ],

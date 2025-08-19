@@ -481,7 +481,7 @@ export default function CameraCaptureMobile() {
           <img
             src="/check.png"
             alt="완료"
-            style={{ width: 44, height: 44, objectFit: "contain" }}
+            style={{ width: 85, height: 85, objectFit: "contain" }}
           />
         </div>
       ) : (

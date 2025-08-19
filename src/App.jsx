@@ -6,6 +6,8 @@ import MapPage from "./page/MapPage";
 import GpsPage from "./page/GpsPage";
 import NotificationsPage from "./page/NotificationsPage";
 import RecommendedCourse from "./page/RecommendedCourse";
+import FinishRunningPage from "./page/FinishRunningPage";
+import MissionCertificate from "./page/MissionCertificatePage";
 
 // 홈: 2x2 버튼 그리드
 function Home() {
@@ -37,6 +39,13 @@ function Home() {
             경로추천
           </button>
 
+          <button className="btn" onClick={() => navigate("/finish_run")}>
+            <span className="btn-emoji" aria-hidden>
+              🗺️
+            </span>
+            달리기 종료
+          </button>
+
           <button className="btn" onClick={() => navigate("/notifications")}>
             <span className="btn-emoji" aria-hidden>
               🔔
@@ -49,6 +58,13 @@ function Home() {
               📍
             </span>
             GPS
+          </button>
+
+          <button className="btn" onClick={() => navigate("/mission")}>
+            <span className="btn-emoji" aria-hidden>
+              🔔
+            </span>
+            미션성공
           </button>
         </div>
       </div>
@@ -65,6 +81,8 @@ export default function App() {
       <Route path="/recommend" element={<RecommendedCourse />} />
       <Route path="/notifications" element={<NotificationsPage />} />
       <Route path="/gps" element={<GpsPage />} />
+      <Route path="/finish_run" element={<FinishRunningPage />} />
+      <Route path="/mission" element={<MissionCertificate />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

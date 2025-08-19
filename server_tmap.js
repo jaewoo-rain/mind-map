@@ -2,6 +2,7 @@
 const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
+const path = require("path"); // path 모듈 추가
 require("dotenv").config();
 
 const app = express();
@@ -15,6 +16,10 @@ if (!process.env.TMAP_APP_KEY) {
 
 app.use(cors({ origin: "*" }));
 app.use(express.json());
+
+// Vite로 빌드한 정적 파일들을 제공합니다.
+// __dirname은 현재 파일(server_tmap.js)의 위치입니다.
+app.use(express.static(path.join(__dirname, 'dist')));
 
 // 헬스체크
 app.get("/health", (_, res) => res.json({ ok: true }));
@@ -112,6 +117,12 @@ app.get("/api/tmap/pedestrian", async (req, res) => {
       detail: e?.response?.data || e.message,
     });
   }
+});
+
+// API 라우트 및 정적 파일로 처리되지 않은 모든 요청을 React 앱으로 보냅니다.
+// PWA의 새로고침 문제를 해결해줍니다.
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 app.listen(PORT, () => {
