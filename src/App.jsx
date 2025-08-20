@@ -138,6 +138,13 @@ function Home() {
             </span>
             러닝
           </button>
+
+          <button style={btn} onClick={() => navigate("/activity")}>
+            <span style={emoji} aria-hidden>
+              🚀
+            </span>
+            활동
+          </button>
         </div>
       </div>
     </div>

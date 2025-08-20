@@ -78,13 +78,11 @@ const BottomBar = ({ activeTab = "running", positioning = "fixed" }) => {
   };
 
   const containerStyle = {
-    width: "100%",
     background: "white",
     overflow: "hidden",
     borderTop: "0.50px #C4C4C6 solid",
     position: positioning,
     bottom: 0,
-    left: 0,
     zIndex: 10,
     display: "flex",
     flexDirection: "column",
@@ -93,7 +91,9 @@ const BottomBar = ({ activeTab = "running", positioning = "fixed" }) => {
   };
 
   if (positioning === "fixed") {
-    containerStyle.right = 0;
+    containerStyle.width = 328;
+    containerStyle.left = '50%';
+    containerStyle.transform = 'translateX(-50%)';
   }
 
   return (
