@@ -33,13 +33,42 @@ const formatPace = (paceInMinutes) => {
 
 const ImageCarousel = () => {
   const [activeSlide, setActiveSlide] = useState(0);
+  const [touchStart, setTouchStart] = useState(null);
+
   const slides = [
     <img key="map" style={{ width: '100%', height: '100%', objectFit: 'cover' }} src="https://placehold.co/328x328" alt="map" />,
     <img key="photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} src="https://placehold.co/328x328/eee/ccc?text=Photo" alt="photo" />
   ];
+  const slideCount = slides.length;
+
+  const handleTouchStart = (e) => {
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = (e) => {
+    if (touchStart === null) {
+      return;
+    }
+    const touchEnd = e.changedTouches[0].clientX;
+    const diff = touchStart - touchEnd;
+    const isSwipe = Math.abs(diff) > 50; // Swipe threshold
+
+    if (isSwipe) {
+      if (diff > 0) { // Swiped left
+        setActiveSlide(prev => (prev + 1) % slideCount);
+      } else { // Swiped right
+        setActiveSlide(prev => (prev - 1 + slideCount) % slideCount);
+      }
+    }
+    setTouchStart(null); // Reset
+  };
 
   return (
-    <div style={{ width: 328, height: 328, position: 'relative', overflow: 'hidden' }}>
+    <div
+      style={{ width: 328, height: 328, position: 'relative', overflow: 'hidden' }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {slides[activeSlide]}
       <div style={{
         position: 'absolute',
