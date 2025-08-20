@@ -51,11 +51,12 @@ const mockStories = [
   {
     id: 5,
     type: "plain",
-    imageSrc: "https://images.unsplash.com/photo-1544882774-c654a322442d?w=500",
+    imageSrc:
+      "https://cdn.pixabay.com/photo/2014/09/18/17/29/sea-451168_1280.jpg",
     author: "돌하르방",
     avatar: "https://placehold.co/30x30/95a5a6/FFFFFF?text=D",
     timeAgo: "어제",
-    photo: "https://images.unsplash.com/photo-1544882774-c654a322442d?w=500",
+    photo: "https://cdn.pixabay.com/photo/2014/09/18/17/29/sea-451168_1280.jpg",
     caption: "제주 시내 야경",
   },
 ];
