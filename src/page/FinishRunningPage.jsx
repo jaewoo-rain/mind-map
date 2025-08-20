@@ -1,6 +1,7 @@
 // src/RunningCoursePage.jsx
 import React from "react";
 import { useLocation } from "react-router-dom";
+import BottomBar from "../components/BottomBar.jsx";
 
 const formatTime = (timeInSeconds) => {
   if (timeInSeconds === undefined || timeInSeconds === null) return "00:00:00";
@@ -171,7 +172,7 @@ export default function FinishRunningPage() {
           height: 50,
           padding: 10,
           left: 16,
-          top: 652,
+          top: 568,
           position: "absolute",
           background: "#FF8C42",
           borderRadius: 5,
@@ -190,7 +191,7 @@ export default function FinishRunningPage() {
           height: 50,
           padding: 10,
           left: 16,
-          top: 714,
+          top: 630,
           position: "absolute",
           background: "#1E1E22",
           borderRadius: 5,
@@ -203,6 +204,7 @@ export default function FinishRunningPage() {
           공유하기
         </div>
       </div>
+      <BottomBar activeTab="running" positioning="absolute" />
     </div>
   );
 }

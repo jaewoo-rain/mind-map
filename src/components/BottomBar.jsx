@@ -41,7 +41,7 @@ const TabItem = ({ name, label, active, onClick }) => {
   );
 };
 
-const BottomBar = ({ activeTab = "running" }) => {
+const BottomBar = ({ activeTab = "running", positioning = 'fixed' }) => {
     const navigate = useNavigate();
     const tabs = [
         { id: 'feed', label: '피드', path: '/feed' },
@@ -56,8 +56,27 @@ const BottomBar = ({ activeTab = "running" }) => {
         }
     };
 
+    const containerStyle = {
+        width: '100%',
+        background: 'white',
+        overflow: 'hidden',
+        borderTop: '0.50px #C4C4C6 solid',
+        position: positioning,
+        bottom: 0,
+        left: 0,
+        zIndex: 10,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center'
+    };
+
+    if (positioning === 'fixed') {
+        containerStyle.right = 0;
+    }
+
     return (
-        <div style={{width: '100%', background: 'white', overflow: 'hidden', borderTop: '0.50px #C4C4C6 solid', position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center'}}>
+        <div style={containerStyle}>
             <div style={{alignSelf: 'stretch', justifyContent: 'center', alignItems: 'center', display: 'inline-flex'}}>
                 {tabs.map(tab => (
                     <TabItem
