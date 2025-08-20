@@ -1,5 +1,5 @@
 // src/RunningCoursePage.jsx
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import BottomBar from "../components/BottomBar.jsx";
 
@@ -33,28 +33,103 @@ const formatPace = (paceInMinutes) => {
 
 const ImageCarousel = () => {
   const [activeSlide, setActiveSlide] = useState(0);
+  const scrollRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeftStart, setScrollLeftStart] = useState(0);
+
   const slides = [
-    <img key="map" style={{ width: '100%', height: '100%', objectFit: 'cover' }} src="https://placehold.co/328x328" alt="map" />,
-    <img key="photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} src="https://placehold.co/328x328/eee/ccc?text=Photo" alt="photo" />
+    <img key="map" style={{ width: '100%', height: '100%', objectFit: 'cover', userSelect: 'none' }} src="https://placehold.co/328x328" alt="map" />,
+    <img key="photo" style={{ width: '100%', height: '100%', objectFit: 'cover', userSelect: 'none' }} src="https://placehold.co/328x328/eee/ccc?text=Photo" alt="photo" />
   ];
 
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const slideWidth = scrollRef.current.offsetWidth;
+      const currentSlide = Math.round(scrollRef.current.scrollLeft / slideWidth);
+      if (currentSlide !== activeSlide) {
+        setActiveSlide(currentSlide);
+      }
+    }
+  };
+
+  const scrollToSlide = (index) => {
+    if (scrollRef.current) {
+      const slideWidth = scrollRef.current.offsetWidth;
+      scrollRef.current.scrollTo({
+        left: slideWidth * index,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+    setStartX(e.pageX - scrollRef.current.offsetLeft);
+    setScrollLeftStart(scrollRef.current.scrollLeft);
+    scrollRef.current.style.cursor = 'grabbing';
+  };
+
+  const handleMouseLeaveOrUp = () => {
+    setIsDragging(false);
+    if (scrollRef.current) {
+      scrollRef.current.style.cursor = 'grab';
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging || !scrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5; // Drag speed multiplier
+    scrollRef.current.scrollLeft = scrollLeftStart - walk;
+  };
+
+
   return (
-    <div style={{ width: 328, height: 328, position: 'relative', overflow: 'hidden' }}>
-      {slides[activeSlide]}
+    <div style={{ width: 328, height: 328, position: 'relative', cursor: 'grab' }}>
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        onMouseDown={handleMouseDown}
+        onMouseLeave={handleMouseLeaveOrUp}
+        onMouseUp={handleMouseLeaveOrUp}
+        onMouseMove={handleMouseMove}
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          overflowX: 'auto',
+          scrollSnapType: 'x mandatory',
+          scrollBehavior: 'smooth',
+          touchAction: 'pan-x',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none'
+        }}
+      >
+        {slides.map((slide, index) => (
+          <div key={index} style={{ width: '100%', flexShrink: 0, scrollSnapAlign: 'center', scrollSnapStop: 'always' }}>
+            {slide}
+          </div>
+        ))}
+      </div>
       <div style={{
         position: 'absolute',
         bottom: 17,
         left: '50%',
         transform: 'translateX(-50%)',
         display: 'flex',
-        gap: 8
+        gap: 8,
+        zIndex: 1 // Ensure indicator is above the slides
       }}>
         <div
-          onClick={() => setActiveSlide(0)}
+          onClick={() => scrollToSlide(0)}
           style={{width: 8, height: 8, background: activeSlide === 0 ? '#FF8C42' : '#C4C4C6', borderRadius: 9999, cursor: 'pointer'}}
         />
         <div
-          onClick={() => setActiveSlide(1)}
+          onClick={() => scrollToSlide(1)}
           style={{width: 8, height: 8, background: activeSlide === 1 ? '#FF8C42' : '#C4C4C6', borderRadius: 9999, cursor: 'pointer'}}
         />
       </div>
