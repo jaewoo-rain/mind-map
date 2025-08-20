@@ -1,5 +1,5 @@
 // src/RunningCoursePage.jsx
-import React from "react";
+import React, { useState } from "react";
 import { useLocation } from "react-router-dom";
 import BottomBar from "../components/BottomBar.jsx";
 
@@ -31,6 +31,37 @@ const formatPace = (paceInMinutes) => {
   return `${minutes}'${seconds}''`;
 };
 
+const ImageCarousel = () => {
+  const [activeSlide, setActiveSlide] = useState(0);
+  const slides = [
+    <img key="map" style={{ width: '100%', height: '100%', objectFit: 'cover' }} src="https://placehold.co/328x328" alt="map" />,
+    <img key="photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} src="https://placehold.co/328x328/eee/ccc?text=Photo" alt="photo" />
+  ];
+
+  return (
+    <div style={{ width: 328, height: 328, position: 'relative', overflow: 'hidden' }}>
+      {slides[activeSlide]}
+      <div style={{
+        position: 'absolute',
+        bottom: 17,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        display: 'flex',
+        gap: 8
+      }}>
+        <div
+          onClick={() => setActiveSlide(0)}
+          style={{width: 8, height: 8, background: activeSlide === 0 ? '#FF8C42' : '#C4C4C6', borderRadius: 9999, cursor: 'pointer'}}
+        />
+        <div
+          onClick={() => setActiveSlide(1)}
+          style={{width: 8, height: 8, background: activeSlide === 1 ? '#FF8C42' : '#C4C4C6', borderRadius: 9999, cursor: 'pointer'}}
+        />
+      </div>
+    </div>
+  );
+};
+
 export default function FinishRunningPage() {
   const location = useLocation();
   const { elapsedTime, distance, calories, pace } = location.state || {
@@ -60,13 +91,14 @@ export default function FinishRunningPage() {
           position: "absolute",
           display: "flex",
           flexDirection: "column",
+          alignItems: "flex-start",
           gap: 26,
         }}
       >
         {/* 코스 정보 */}
         <div
           style={{
-            width: 252,
+            width: 328, // Use full width to align left
             display: "flex",
             flexDirection: "column",
             gap: 12,
@@ -126,84 +158,27 @@ export default function FinishRunningPage() {
         </div>
 
         {/* 지도 & 이미지 */}
-        <img
-          style={{ width: 328, height: 328 }}
-          src="https://placehold.co/328x328"
-          alt="map"
-        />
-        <img
-          style={{ width: 576, height: 822 }}
-          src="https://placehold.co/576x822"
-          alt="photo"
-        />
+        <ImageCarousel />
 
-        {/* 선택된 영역 */}
-        <div
-          style={{
-            width: 136.56,
-            height: 173.28,
-            borderRadius: 3.84,
-            outline: "5px #FF8C42 solid",
-            outlineOffset: "-2.5px",
-          }}
-        />
-
-        {/* 위치 정보 */}
-        <div
-          style={{
-            padding: 10,
-            background: "#FCFCFC",
-            borderRadius: 8,
-            display: "inline-flex",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <div style={{ fontSize: 12, fontWeight: 500, color: "#2A292E" }}>
-            오등동, 제주시
-          </div>
+        {/* 버튼 영역 */}
+        <div style={{
+          alignSelf: 'center',
+          width: 206,
+          paddingLeft: 12,
+          paddingRight: 12,
+          paddingTop: 10,
+          paddingBottom: 10,
+          background: 'var(--main, #FF8C42)',
+          borderRadius: 30,
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 9.60,
+          display: 'inline-flex'
+        }}>
+          <div style={{textAlign: 'center', color: '#FCFCFC', fontSize: 15, fontFamily: 'Pretendard', fontWeight: '700', wordWrap: 'break-word'}}>공유하기</div>
         </div>
       </div>
 
-      {/* 버튼 영역 */}
-      <div
-        style={{
-          width: 328,
-          height: 50,
-          padding: 10,
-          left: 16,
-          top: 568,
-          position: "absolute",
-          background: "#FF8C42",
-          borderRadius: 5,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <div style={{ color: "#FCFCFC", fontSize: 15, fontWeight: 700 }}>
-          사진 저장하기
-        </div>
-      </div>
-      <div
-        style={{
-          width: 328,
-          height: 50,
-          padding: 10,
-          left: 16,
-          top: 630,
-          position: "absolute",
-          background: "#1E1E22",
-          borderRadius: 5,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <div style={{ color: "#FCFCFC", fontSize: 15, fontWeight: 700 }}>
-          공유하기
-        </div>
-      </div>
       <BottomBar activeTab="running" positioning="absolute" />
     </div>
   );
