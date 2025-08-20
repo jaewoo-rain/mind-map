@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-// 레벨 정의 (줄바꿈 \n 포함)
+// (LEVELS, normalizeIndex 등 상단 로직은 변경 없음)
 const LEVELS = [
   {
     id: "level1",
@@ -18,8 +18,6 @@ const LEVELS = [
     img: "/level3.png",
   },
 ];
-
-// label(문구) 또는 id(level1~3) 모두 초기값으로 허용
 function normalizeIndex(defaultLevel) {
   if (!defaultLevel) return 0;
   const byId = LEVELS.findIndex((l) => l.id === defaultLevel);
@@ -29,21 +27,37 @@ function normalizeIndex(defaultLevel) {
 }
 
 export default function RunningLevelPage({
-  defaultLevel = null, // 'level1'|'level2'|'level3' 또는 label 문자열
-  onBack, // optional
-  onNext, // (label:string) => void  ← 기존과 동일
+  defaultLevel = null,
+  onBack,
+  onNext,
 }) {
   const [idx, setIdx] = useState(() => normalizeIndex(defaultLevel));
+
+  // [추가] 1. 애니메이션 효과를 위한 상태
+  const [isFading, setIsFading] = useState(false);
+
   const level = LEVELS[idx];
   const canProceed = useMemo(() => !!level, [level]);
 
-  const prev = () => setIdx((i) => Math.max(0, i - 1));
-  const next = () => setIdx((i) => Math.min(LEVELS.length - 1, i + 1));
+  // [수정] 2. prev/next 함수를 애니메이션을 고려하여 변경
+  const changeLevel = (newIndex) => {
+    if (newIndex === idx || isFading) return; // 이미 바뀌고 있으면 중복 실행 방지
+
+    setIsFading(true); // 애니메이션 시작 (사라지기)
+    setTimeout(() => {
+      setIdx(newIndex); // 내용 변경
+      setIsFading(false); // 애니메이션 종료 (나타나기)
+    }, 200); // 0.2초 뒤에 실행
+  };
+
+  const prev = () => changeLevel(Math.max(0, idx - 1));
+  const next = () => changeLevel(Math.min(LEVELS.length - 1, idx + 1));
+
   const submit = () => {
     if (canProceed && onNext) onNext(level.label);
   };
 
-  // 키보드 ←/→, Enter 지원
+  // ... (useEffect, handleBack 등 나머지 로직은 거의 동일) ...
   useEffect(() => {
     const h = (e) => {
       if (e.key === "ArrowLeft") prev();
@@ -53,7 +67,7 @@ export default function RunningLevelPage({
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idx]);
+  }, [idx, isFading]); // isFading을 의존성 배열에 추가
 
   const handleBack = () => {
     if (typeof onBack === "function") onBack();
@@ -63,243 +77,209 @@ export default function RunningLevelPage({
   return (
     <div
       style={{
-        width: 375,
-        height: 812,
-        position: "relative",
+        width: "100%",
+        minHeight: "100vh",
         background: "white",
-        overflow: "hidden",
-        margin: "0 auto",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
-      {/* (간단) 상태바 */}
-      <div
-        style={{
-          width: 376,
-          height: 54,
-          left: -1,
-          top: 0,
-          position: "absolute",
-          background: "white",
-        }}
-      >
-        <div
+      <header style={{ position: "relative", height: 108, flexShrink: 0 }}>
+        <button
+          onClick={handleBack}
+          aria-label="뒤로가기"
           style={{
             position: "absolute",
-            left: 48.68,
-            top: 18.34,
-            color: "black",
-            fontSize: 17,
-            fontFamily: "SF Pro",
-            fontWeight: 590,
-            lineHeight: "22px",
+            left: 12,
+            top: 56,
+            width: 32,
+            height: 32,
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
-          9:41
-        </div>
-      </div>
-
-      {/* ✅ 뒤로가기 (다른 페이지와 동일한 보더-체브론 방식) */}
-      <button
-        onClick={handleBack}
-        aria-label="뒤로가기"
+          <div
+            style={{
+              width: 10,
+              height: 10,
+              borderLeft: "2px solid #1E1E22",
+              borderBottom: "2px solid #1E1E22",
+              transform: "rotate(45deg)",
+            }}
+          />
+        </button>
+      </header>
+      <main
         style={{
-          position: "absolute",
-          left: 12,
-          top: 66,
-          width: 32,
-          height: 32,
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <div
-          style={{
-            width: 10,
-            height: 10,
-            borderLeft: "2px solid #1E1E22",
-            borderBottom: "2px solid #1E1E22",
-            transform: "rotate(45deg)",
-          }}
-        />
-      </button>
-
-      {/* 타이틀 */}
-      <div
-        style={{
-          left: 18,
-          top: 120,
-          position: "absolute",
-          color: "#1E1E22",
-          fontSize: 30,
-          fontFamily: "Pretendard",
-          fontWeight: 500,
-          lineHeight: "30px",
-        }}
-      >
-        평소 러닝 강도는?
-      </div>
-
-      {/* 멘트 + 이미지 (넓은 폭 + 줄바꿈 반영) */}
-      <div
-        style={{
-          left: 16,
-          right: 16,
-          top: 253,
-          position: "absolute",
+          flex: 1,
+          padding: "0 18px",
           display: "flex",
           flexDirection: "column",
-          alignItems: "center",
-          gap: 16,
+          gap: 24,
         }}
       >
-        <div
+        <h1
           style={{
-            maxWidth: 343,
-            padding: "0 10px",
-            textAlign: "center",
             color: "#1E1E22",
-            fontSize: 18,
+            fontSize: 30,
             fontFamily: "Pretendard",
             fontWeight: 500,
-            lineHeight: "26px",
-            whiteSpace: "pre-line", // ← \n 줄바꿈 적용
-            wordBreak: "keep-all", // ← 한글 단어 깨짐 방지
+            lineHeight: "34.5px",
+            margin: 0,
           }}
         >
-          {`“${level.label}”`}
-        </div>
-
-        <img
-          src={level.img}
-          alt={level.id}
-          style={{ width: 180, height: 150, objectFit: "contain" }}
-        />
-      </div>
-
-      {/* 좌/우 화살표 */}
-      <button
-        onClick={prev}
-        disabled={idx === 0}
-        aria-label="이전 레벨"
-        style={{
-          position: "absolute",
-          left: 18,
-          top: 397,
-          width: 32,
-          height: 32,
-          borderRadius: "50%",
-          border: "none",
-          background: "rgba(0,0,0,0.50)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          cursor: idx === 0 ? "not-allowed" : "pointer",
-          opacity: idx === 0 ? 0.4 : 1,
-        }}
-      >
+          평소 러닝 강도는?
+        </h1>
         <div
           style={{
-            width: 10,
-            height: 10,
-            borderLeft: "2px solid #FFFFFF",
-            borderBottom: "2px solid #FFFFFF",
-            transform: "rotate(45deg)",
-          }}
-        />
-      </button>
-
-      <button
-        onClick={next}
-        disabled={idx === LEVELS.length - 1}
-        aria-label="다음 레벨"
-        style={{
-          position: "absolute",
-          right: 18,
-          top: 397,
-          width: 32,
-          height: 32,
-          borderRadius: "50%",
-          border: "none",
-          background: "rgba(0,0,0,0.50)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          cursor: idx === LEVELS.length - 1 ? "not-allowed" : "pointer",
-          opacity: idx === LEVELS.length - 1 ? 0.4 : 1,
-        }}
-      >
-        <div
-          style={{
-            width: 10,
-            height: 10,
-            borderLeft: "2px solid #FFFFFF",
-            borderBottom: "2px solid #FFFFFF",
-            transform: "rotate(-135deg)",
-          }}
-        />
-      </button>
-
-      {/* 하단 CTA */}
-      <div
-        style={{
-          position: "absolute",
-          left: 16,
-          width: 343,
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
-          zIndex: 10,
-        }}
-      >
-        <button
-          onClick={submit}
-          disabled={!canProceed}
-          style={{
-            width: "100%",
-            height: 54,
-            borderRadius: 6,
-            border: "none",
-            display: "inline-flex",
-            justifyContent: "center",
+            flex: 1,
+            display: "flex",
             alignItems: "center",
-            background: canProceed ? "#FF8C42" : "#E4E4E7",
-            color: canProceed ? "#FCFCFC" : "#9CA3AF",
-            fontSize: 16,
-            fontFamily: "Pretendard",
-            fontWeight: 700,
-            lineHeight: "16px",
-            cursor: canProceed ? "pointer" : "not-allowed",
+            justifyContent: "center",
           }}
         >
-          다음
-        </button>
-      </div>
+          <div style={{ position: "relative", width: "100%" }}>
+            {/* [수정] 3. 애니메이션 스타일 적용 */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 16,
+                // --- 애니메이션 스타일 ---
+                transition:
+                  "opacity 200ms ease-in-out, transform 200ms ease-in-out",
+                opacity: isFading ? 0 : 1,
+                transform: isFading ? "scale(0.98)" : "scale(1)",
+              }}
+            >
+              <div
+                style={{
+                  padding: "0 10px",
+                  textAlign: "center",
+                  color: "#1E1E22",
+                  fontSize: 18,
+                  fontFamily: "Pretendard",
+                  fontWeight: 500,
+                  lineHeight: "26px",
+                  whiteSpace: "pre-line",
+                  wordBreak: "keep-all",
+                  minHeight: 52,
+                }}
+              >
+                {`“${level.label}”`}
+              </div>
 
-      {/* 홈 인디케이터(미리보기) */}
+              <img
+                src={level.img}
+                alt={level.id}
+                style={{ width: 180, height: 150, objectFit: "contain" }}
+              />
+            </div>
+            {/* (좌/우 화살표 버튼 코드는 변경 없음) */}
+            <button
+              onClick={prev}
+              disabled={idx === 0}
+              aria-label="이전 레벨"
+              style={{
+                position: "absolute",
+                left: 0,
+                top: "50%",
+                transform: "translateY(-50%)",
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                border: "none",
+                background: "rgba(0,0,0,0.50)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: idx === 0 ? "not-allowed" : "pointer",
+                opacity: idx === 0 ? 0.4 : 1,
+              }}
+            >
+              <div
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderLeft: "2px solid #FFFFFF",
+                  borderBottom: "2px solid #FFFFFF",
+                  transform: "rotate(45deg)",
+                }}
+              />
+            </button>
+            <button
+              onClick={next}
+              disabled={idx === LEVELS.length - 1}
+              aria-label="다음 레벨"
+              style={{
+                position: "absolute",
+                right: 0,
+                top: "50%",
+                transform: "translateY(-50%)",
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                border: "none",
+                background: "rgba(0,0,0,0.50)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: idx === LEVELS.length - 1 ? "not-allowed" : "pointer",
+                opacity: idx === LEVELS.length - 1 ? 0.4 : 1,
+              }}
+            >
+              <div
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderLeft: "2px solid #FFFFFF",
+                  borderBottom: "2px solid #FFFFFF",
+                  transform: "rotate(-135deg)",
+                }}
+              />
+            </button>
+          </div>
+        </div>
+      </main>
+      {/* (하단 CTA 버튼 코드는 변경 없음) */}
       <div
         style={{
-          width: 375,
-          height: 24,
-          position: "absolute",
-          left: 0,
+          padding: "16px",
+          paddingTop: 8,
+          background: "white",
+          position: "sticky",
           bottom: 0,
-          pointerEvents: "none",
+          flexShrink: 0,
         }}
       >
-        <div
-          style={{
-            width: 129,
-            height: 4.5,
-            left: 123,
-            top: 16.8,
-            position: "absolute",
-            background: "black",
-            borderRadius: 90,
-            opacity: 0.9,
-          }}
-        />
+        <div style={{ paddingBottom: `env(safe-area-inset-bottom, 0px)` }}>
+          <button
+            onClick={submit}
+            disabled={!canProceed}
+            style={{
+              width: "100%",
+              height: 54,
+              borderRadius: 6,
+              border: "none",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              background: canProceed ? "#FF8C42" : "#E4E4E7",
+              color: canProceed ? "#FCFCFC" : "#9CA3AF",
+              fontSize: 16,
+              fontFamily: "Pretendard",
+              fontWeight: 700,
+              cursor: canProceed ? "pointer" : "not-allowed",
+            }}
+          >
+            다음
+          </button>
+        </div>
       </div>
     </div>
   );

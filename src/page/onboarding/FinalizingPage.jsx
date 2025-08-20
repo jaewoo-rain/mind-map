@@ -1,10 +1,5 @@
 import React, { useEffect } from "react";
 
-/**
- * 추천코스 생성 로딩 화면
- * - 2초 회전 후 recommendPath로 이동
- * - API 호출은 아래 useEffect 내부 주석 위치에 추가하면 됨
- */
 export default function FinalizingPage({
   recommendPath = "/recommend",
   durationMs = 2000,
@@ -13,6 +8,7 @@ export default function FinalizingPage({
   // saveUrl = "/api/onboarding/complete",
   // onComplete,
 }) {
+  // [변경 없음] useEffect 로직과 API 관련 주석은 그대로 유지합니다.
   useEffect(() => {
     let cancelled = false;
 
@@ -33,7 +29,6 @@ export default function FinalizingPage({
 
     const delay = new Promise((r) => setTimeout(r, durationMs));
 
-    // 지금은 API가 없으니 delay만 기다렸다가 이동
     Promise.allSettled([delay /*, api*/]).then(() => {
       if (!cancelled) window.location.href = recommendPath;
     });
@@ -44,51 +39,31 @@ export default function FinalizingPage({
   }, [durationMs, recommendPath /*, saveUrl, profile, onComplete*/]);
 
   return (
+    // [변경] 전체 컨테이너를 화면 중앙 정렬 Flexbox로 설정
     <div
       style={{
-        width: 360,
-        height: 800,
-        position: "relative",
+        width: "100%",
+        minHeight: "100vh",
         background: "white",
-        overflow: "hidden",
-        margin: "0 auto",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center", // 수평 중앙 정렬
+        justifyContent: "center", // 수직 중앙 정렬
+        padding: "18px",
+        gap: 60, // 타이틀과 스피너 사이의 간격
       }}
     >
-      {/* 간단 상태바(미리보기용) */}
-      <div
-        style={{
-          width: 376,
-          height: 54,
-          left: -1,
-          top: 0,
-          position: "absolute",
-          background: "white",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            left: 48.68,
-            top: 18.34,
-            color: "black",
-            fontSize: 17,
-            fontFamily: "SF Pro",
-            fontWeight: 590,
-            lineHeight: "22px",
-          }}
-        >
-          9:41
-        </div>
-      </div>
+      {/* 스피너 애니메이션 (변경 없음) */}
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
 
       {/* 타이틀/서브타이틀 */}
       <div
         style={{
-          width: 323,
-          left: 18,
-          top: 183,
-          position: "absolute",
-          display: "inline-flex",
+          display: "flex", // inline-flex -> flex
           flexDirection: "column",
           alignItems: "center",
           gap: 14,
@@ -120,18 +95,11 @@ export default function FinalizingPage({
       </div>
 
       {/* 회전 스피너 */}
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
       <div
         style={{
           width: 150,
           height: 150,
-          left: 105,
-          top: 325,
-          position: "absolute",
+          position: "relative", // 내부 요소들의 기준점 역할은 유지
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -144,11 +112,10 @@ export default function FinalizingPage({
             width: 150,
             height: 150,
             borderRadius: "50%",
-            border: "12px solid #C4C4C6",
-            opacity: 1,
+            border: "12px solid #E4E4E7", // 비활성 색상 변경
           }}
         />
-        {/* 주황 아크(상단 한쪽만 주황) + 회전 */}
+        {/* 주황 아크 + 회전 */}
         <div
           style={{
             position: "absolute",
@@ -158,30 +125,6 @@ export default function FinalizingPage({
             border: "12px solid transparent",
             borderTopColor: "#FF8C42",
             animation: "spin 1.1s linear infinite",
-          }}
-        />
-      </div>
-
-      {/* 하단 홈 인디케이터(미리보기) */}
-      <div
-        style={{
-          width: 360,
-          height: 24,
-          left: 0,
-          bottom: 0,
-          position: "absolute",
-        }}
-      >
-        <div
-          style={{
-            width: 128.96,
-            height: 4.48,
-            left: 116,
-            top: 16.84,
-            position: "absolute",
-            background: "black",
-            borderRadius: 90,
-            opacity: 0.9,
           }}
         />
       </div>

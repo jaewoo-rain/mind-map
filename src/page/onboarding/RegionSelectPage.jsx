@@ -1,15 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 
 export default function RegionSelectPage({
-  defaultRegion = null, // 선택 유지용(옵션): '동부' | '서부' | '남부' | '북부'
+  defaultRegion = null,
   onBack,
   onNext,
 }) {
   const [region, setRegion] = useState(defaultRegion);
-
   const canProceed = useMemo(() => !!region, [region]);
 
-  // Enter로 진행
+  // --- 기존 로직 (변경 없음) ---
   useEffect(() => {
     const handler = (e) => {
       if (e.key === "Enter" && canProceed) handleNext();
@@ -29,28 +28,26 @@ export default function RegionSelectPage({
 
   const regionList = ["동부", "서부", "남부", "북부"];
 
+  // --- 스타일 함수 (일부 수정) ---
   const listItemStyle = (selected) => ({
     width: "100%",
     height: 60,
     padding: "14px 16px",
     borderRadius: 6,
-    display: "inline-flex",
+    display: "flex", // inline-flex -> flex
     alignItems: "center",
-    justifyContent: "flex-start",
     background: selected ? "#FFF4EC" : "#FFFFFF",
-    outline: selected ? "1px var(--main, #FF8C42) solid" : "1px #C4C4C6 solid",
+    outline: selected ? "1px solid var(--main, #FF8C42)" : "1px solid #E4E4E7",
     outlineOffset: -1,
     border: "none",
     cursor: "pointer",
     transition: "background 120ms ease, outline-color 120ms ease",
+    textAlign: "left",
   });
 
   const listTextStyle = (selected) => ({
-    width: 311,
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    color: selected ? "#2A292E" : "#C4C4C6",
+    // [변경] 고정 너비 제거
+    color: selected ? "#2A292E" : "#71717A",
     fontSize: 16,
     fontFamily: "Pretendard",
     fontWeight: 500,
@@ -58,205 +55,159 @@ export default function RegionSelectPage({
   });
 
   return (
+    // [변경] 전체 컨테이너를 화면에 꽉 차는 Flexbox로 설정
     <div
       style={{
-        width: 375,
-        height: 812,
-        position: "relative",
+        width: "100%",
+        minHeight: "100vh",
         background: "white",
-        overflow: "hidden",
-        margin: "0 auto",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
-      {/* 상단 상태바(간단) */}
-      <div
-        style={{
-          width: 376,
-          height: 54,
-          left: -1,
-          top: 0,
-          position: "absolute",
-          background: "white",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            left: 48.68,
-            top: 18.34,
-            color: "black",
-            fontSize: 17,
-            fontFamily: "SF Pro",
-            fontWeight: 590,
-            lineHeight: "22px",
-          }}
-        >
-          9:41
-        </div>
-      </div>
-
-      {/* 뒤로가기 */}
-      <button
-        onClick={handleBack}
-        aria-label="뒤로가기"
-        style={{
-          position: "absolute",
-          left: 12,
-          top: 66,
-          width: 32,
-          height: 32,
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <div
-          style={{
-            width: 10,
-            height: 10,
-            borderLeft: "2px solid #1E1E22",
-            borderBottom: "2px solid #1E1E22",
-            transform: "rotate(45deg)",
-          }}
-        />
-      </button>
-
-      {/* 타이틀 */}
-      <div
-        style={{
-          left: 18,
-          top: 120,
-          position: "absolute",
-          color: "#1E1E22",
-          fontSize: 30,
-          fontFamily: "Pretendard",
-          fontWeight: 500,
-          lineHeight: "30px",
-        }}
-      >
-        제주에서 러닝하실 지역은?
-      </div>
-
-      {/* 지도 + 핀 */}
-      <div
-        style={{
-          width: 339,
-          height: 218,
-          left: 18,
-          top: 167,
-          position: "absolute",
-          overflow: "hidden",
-        }}
-      >
-        <img
-          src="/jeju.png"
-          alt="제주 지도"
-          style={{
-            width: 280,
-            height: 167,
-            position: "absolute",
-            left: 30,
-            top: 22,
-            objectFit: "cover",
-            // 디자인엔 녹색 박스였지만 실제 이미지를 쓰므로 테두리만 남길 수도 있어요:
-            // outline: "1px #5D9C55 solid",
-          }}
-        />
-      </div>
-
-      {/* 리스트(동/서/남/북) */}
-      <div
-        role="radiogroup"
-        aria-label="지역 선택"
-        style={{
-          width: 343,
-          left: 18,
-          top: 405,
-          position: "absolute",
-          display: "inline-flex",
-          flexDirection: "column",
-          alignItems: "flex-start",
-          gap: 14,
-        }}
-      >
-        {regionList.map((r) => {
-          const selected = region === r;
-          return (
-            <button
-              key={r}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              onClick={() => setRegion(r)}
-              style={listItemStyle(selected)}
-            >
-              <div style={listTextStyle(selected)}>{r}</div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* 하단 CTA */}
-      <div
-        style={{
-          position: "absolute",
-          left: 16,
-          width: 343,
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
-          zIndex: 10,
-        }}
-      >
+      {/* 상단 네비게이션 영역 */}
+      <header style={{ position: "relative", height: 108, flexShrink: 0 }}>
+        {/* 뒤로가기 버튼 */}
         <button
-          type="button"
-          onClick={handleNext}
-          disabled={!canProceed}
+          onClick={handleBack}
+          aria-label="뒤로가기"
           style={{
-            width: "100%",
-            height: 54,
-            borderRadius: 6,
+            position: "absolute",
+            left: 12,
+            top: 56,
+            width: 32,
+            height: 32,
+            background: "transparent",
             border: "none",
-            display: "inline-flex",
+            cursor: "pointer",
+            display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: canProceed ? "#FF8C42" : "#E4E4E7",
-            color: canProceed ? "#FCFCFC" : "#9CA3AF",
-            fontSize: 16,
-            fontFamily: "Pretendard",
-            fontWeight: 700,
-            lineHeight: "16px",
-            cursor: canProceed ? "pointer" : "not-allowed",
           }}
         >
-          다음
+          <div
+            style={{
+              width: 10,
+              height: 10,
+              borderLeft: "2px solid #1E1E22",
+              borderBottom: "2px solid #1E1E22",
+              transform: "rotate(45deg)",
+            }}
+          />
         </button>
-      </div>
+      </header>
 
-      {/* 홈 인디케이터(미리보기) */}
-      <div
+      {/* [변경] 메인 컨텐츠 영역: 스크롤 가능하도록 설정 */}
+      <main
         style={{
-          width: 375,
-          height: 24,
-          position: "absolute",
-          left: 0,
-          bottom: 0,
-          pointerEvents: "none",
+          flex: 1, // 남는 공간 모두 차지
+          padding: "12px 18px 0",
+          display: "flex",
+          flexDirection: "column",
+          gap: 16, // 요소들 사이의 간격
+          overflowY: "auto", // 내용이 많아지면 스크롤
         }}
       >
+        {/* 타이틀 */}
+        <h1
+          style={{
+            color: "#1E1E22",
+            fontSize: 30,
+            fontFamily: "Pretendard",
+            fontWeight: 500,
+            lineHeight: "34.5px",
+            margin: 0,
+          }}
+        >
+          제주에서 러닝하실 지역은?
+        </h1>
+
+        {/* [변경] 지도 이미지: 반응형으로 크기 조절 */}
         <div
           style={{
-            width: 129,
-            height: 4.5,
-            left: 123,
-            top: 16.8,
-            position: "absolute",
-            background: "black",
-            borderRadius: 90,
-            opacity: 0.9,
+            width: "100%",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "16px 0",
           }}
-        />
+        >
+          <img
+            src="/jeju.png" // 실제 이미지 경로로 수정 필요
+            alt="제주 지도"
+            style={{
+              maxWidth: 300, // 최대 너비 제한
+              width: "80%", // 컨테이너의 80% 너비 차지
+              height: "auto", // 높이는 비율에 맞게 자동 조절
+              objectFit: "contain",
+            }}
+          />
+        </div>
+
+        {/* 리스트(동/서/남/북) */}
+        <div
+          role="radiogroup"
+          aria-label="지역 선택"
+          style={{
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            gap: 14,
+            paddingBottom: 24, // 리스트 하단 여백
+          }}
+        >
+          {regionList.map((r) => {
+            const selected = region === r;
+            return (
+              <button
+                key={r}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => setRegion(r)}
+                style={listItemStyle(selected)}
+              >
+                <span style={listTextStyle(selected)}>{r}</span>
+              </button>
+            );
+          })}
+        </div>
+      </main>
+
+      {/* [변경] 하단 CTA 버튼: 스크롤과 무관하게 항상 하단에 고정 */}
+      <div
+        style={{
+          padding: "16px",
+          paddingTop: 8,
+          background: "white",
+          position: "sticky",
+          bottom: 0,
+        }}
+      >
+        <div style={{ paddingBottom: `env(safe-area-inset-bottom, 0px)` }}>
+          <button
+            type="button"
+            onClick={handleNext}
+            disabled={!canProceed}
+            style={{
+              width: "100%",
+              height: 54,
+              borderRadius: 6,
+              border: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: canProceed ? "#FF8C42" : "#E4E4E7",
+              color: canProceed ? "#FCFCFC" : "#9CA3AF",
+              fontSize: 16,
+              fontFamily: "Pretendard",
+              fontWeight: 700,
+              cursor: canProceed ? "pointer" : "not-allowed",
+            }}
+          >
+            다음
+          </button>
+        </div>
       </div>
     </div>
   );
