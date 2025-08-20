@@ -1,3 +1,4 @@
+import ActivityPage from "./page/ActivityPage.jsx";
 // src/App.jsx
 import { Routes, Route, useNavigate, Navigate } from "react-router-dom";
 import CameraCapture from "./page/CameraPage";
@@ -157,6 +158,7 @@ export default function App() {
       <Route path="/onboard" element={<OnboardingFlow />} />
       <Route path="/mission" element={<MissionCertificate />} />
       <Route path="/run" element={<RunningPage />} />
+      <Route path="/activity" element={<ActivityPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

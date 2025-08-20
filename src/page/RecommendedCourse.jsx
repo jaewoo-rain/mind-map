@@ -4,6 +4,7 @@ import "./RecommendedCourse.css";
 import { getDistanceFromLatLonInKm } from "../utils/location.js";
 import AlertStart from "../components/AlertStart.jsx";
 import AlertNotStart from "../components/AlertNotStart.jsx";
+import BottomBar from "../components/BottomBar.jsx";
 
 /**
  * 필요 .env
@@ -621,7 +622,7 @@ export default function RecommendedCourse() {
       </div>
 
       {/* 카드 캐러셀: 네이티브 스크롤 + rAF 스냅 */}
-      <div className="carousel-wrap">
+      <div className="carousel-wrap" style={{ bottom: "84px" }}>
         <div
           ref={sliderRef}
           className="carousel"
@@ -646,6 +647,7 @@ export default function RecommendedCourse() {
       </div>
 
       {alertComponent}
+      <BottomBar activeTab="running" />
     </div>
   );
 }
