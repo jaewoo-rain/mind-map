@@ -96,6 +96,9 @@ export default function RunningPage() {
   const polyRef = useRef(null);
   const markersRef = useRef({ start: null, end: null, me: null, poi: [] });
 
+  // 최근 지도의 자동 추적 기준점(지터 방지)
+  const lastFollowPosRef = useRef(null);
+
   // ✅ 실측 뷰포트 사이즈
   const { w: vpW, h: vpH } = useViewport();
 
@@ -129,7 +132,7 @@ export default function RunningPage() {
     return () => clearInterval(timer);
   }, [isPaused, showEndAlert]);
 
-  // Location tracking and calculation effect
+  // Location tracking and calculation effect (거리/칼로리/페이스)
   useEffect(() => {
     if (!isPaused && !showEndAlert && currentLocation && prevLocation) {
       const newDistance = getDistanceFromLatLonInKm(
@@ -265,59 +268,83 @@ export default function RunningPage() {
     };
   }, [selectedLine]);
 
-  // 3) 사용자 위치 추적 + 스팟 근접 알림(50m)
+  // 3) 사용자 위치 마커(커스텀 아이콘) + 자동 따라가기 + 스팟 근접 알림(50m)
   useEffect(() => {
-    if (!poiList.length) return;
-    let meMarker = null;
+    const naver = window.naver?.maps;
+    const map = mapRef.current;
+    if (!naver || !map) return;
 
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        const { latitude: lat, longitude: lng } = pos.coords;
-        if (mapRef.current && !meMarker) {
-          meMarker = new window.naver.maps.Marker({
-            position: new window.naver.maps.LatLng(lat, lng),
-            map: mapRef.current,
-            title: "내 위치",
-            zIndex: 200,
-          });
-          markersRef.current.me = meMarker;
-        } else if (meMarker) {
-          meMarker.setPosition(new window.naver.maps.LatLng(lat, lng));
-        }
-        for (const p of poiList) {
-          if (visitedSpots.has(p.name) || arrivalAlert) continue;
-          const dM = getDistanceFromLatLonInKm(lat, lng, p.lat, p.lng) * 1000;
-          if (dM <= 50) {
-            setVisitedSpots((prev) => new Set(prev).add(p.name));
-            setArrivalAlert(
-              <AlertArrive
-                spotName={p.name}
-                onClose={() => setArrivalAlert(null)}
-                onTakePhoto={() => {
-                  console.log(`사진찍기: ${p.name}`);
-                  setArrivalAlert(null);
-                }}
-              />
-            );
-            break;
+    if (currentLocation?.latitude && currentLocation?.longitude) {
+      const { latitude: lat, longitude: lng } = currentLocation;
+      const here = new naver.LatLng(lat, lng);
+
+      // me 마커 최초 생성
+      if (!markersRef.current.me) {
+        markersRef.current.me = new naver.Marker({
+          position: here,
+          map,
+          title: "내 위치",
+          zIndex: 999,
+          icon: {
+            url: "/user_location.png", // public/user_location.png
+            size: new naver.Size(36, 36),
+            scaledSize: new naver.Size(36, 36),
+            origin: new naver.Point(0, 0),
+            anchor: new naver.Point(18, 18), // 가운데 기준
+          },
+        });
+        map.setCenter(here);
+        lastFollowPosRef.current = { lat, lng };
+      } else {
+        // 위치 갱신
+        markersRef.current.me.setPosition(here);
+
+        // 지터 줄이기: 15m 이상 이동 시에만 따라가기
+        const lp = lastFollowPosRef.current;
+        if (lp) {
+          const movedM =
+            getDistanceFromLatLonInKm(lp.lat, lp.lng, lat, lng) * 1000;
+          if (movedM > 15) {
+            map.panTo(here);
+            lastFollowPosRef.current = { lat, lng };
           }
+        } else {
+          map.panTo(here);
+          lastFollowPosRef.current = { lat, lng };
         }
-      },
-      (err) => {
-        console.error("위치 추적 오류:", err);
-        setMapErr("위치 정보를 가져올 수 없습니다.");
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
+      }
 
+      // 근접 스팟 알림(50m)
+      for (const p of poiList) {
+        if (visitedSpots.has(p.name) || arrivalAlert) continue;
+        const dM = getDistanceFromLatLonInKm(lat, lng, p.lat, p.lng) * 1000;
+        if (dM <= 50) {
+          setVisitedSpots((prev) => new Set(prev).add(p.name));
+          setArrivalAlert(
+            <AlertArrive
+              spotName={p.name}
+              onClose={() => setArrivalAlert(null)}
+              onTakePhoto={() => {
+                console.log(`사진찍기: ${p.name}`);
+                setArrivalAlert(null);
+              }}
+            />
+          );
+          break;
+        }
+      }
+    }
+  }, [currentLocation, poiList, visitedSpots, arrivalAlert]);
+
+  // me 마커 정리 (언마운트 시)
+  useEffect(() => {
     return () => {
-      navigator.geolocation.clearWatch(watchId);
       if (markersRef.current.me) {
         markersRef.current.me.setMap(null);
         markersRef.current.me = null;
       }
     };
-  }, [poiList, visitedSpots, arrivalAlert]);
+  }, []);
 
   const handleStopClick = () => setShowEndAlert(true);
   const handleCloseEndAlert = () => setShowEndAlert(false);
@@ -339,7 +366,7 @@ export default function RunningPage() {
         width: "100vw",
         height: `${vpH}px`,
         overflow: "hidden",
-        background: "#0000", // 투명
+        background: "#0000",
       }}
     >
       {/* ✅ 지도 컨테이너도 inline으로 꽉 채움 */}
