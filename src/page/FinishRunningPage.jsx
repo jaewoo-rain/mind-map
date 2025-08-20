@@ -1,5 +1,5 @@
 // src/RunningCoursePage.jsx
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import BottomBar from "../components/BottomBar.jsx";
 
@@ -33,58 +33,149 @@ const formatPace = (paceInMinutes) => {
 
 const ImageCarousel = () => {
   const [activeSlide, setActiveSlide] = useState(0);
-  const [touchStart, setTouchStart] = useState(null);
+  const scrollRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeftStart, setScrollLeftStart] = useState(0);
 
   const slides = [
-    <img key="map" style={{ width: '100%', height: '100%', objectFit: 'cover' }} src="https://placehold.co/328x328" alt="map" />,
-    <img key="photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} src="https://placehold.co/328x328/eee/ccc?text=Photo" alt="photo" />
+    <img
+      key="map"
+      style={{
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        userSelect: "none",
+      }}
+      src="https://placehold.co/328x328"
+      alt="map"
+    />,
+    <img
+      key="photo"
+      style={{
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        userSelect: "none",
+      }}
+      src="https://placehold.co/328x328/eee/ccc?text=Photo"
+      alt="photo"
+    />,
   ];
-  const slideCount = slides.length;
 
-  const handleTouchStart = (e) => {
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchEnd = (e) => {
-    if (touchStart === null) {
-      return;
-    }
-    const touchEnd = e.changedTouches[0].clientX;
-    const diff = touchStart - touchEnd;
-    const isSwipe = Math.abs(diff) > 50; // Swipe threshold
-
-    if (isSwipe) {
-      if (diff > 0) { // Swiped left
-        setActiveSlide(prev => (prev + 1) % slideCount);
-      } else { // Swiped right
-        setActiveSlide(prev => (prev - 1 + slideCount) % slideCount);
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const slideWidth = scrollRef.current.offsetWidth;
+      const currentSlide = Math.round(
+        scrollRef.current.scrollLeft / slideWidth
+      );
+      if (currentSlide !== activeSlide) {
+        setActiveSlide(currentSlide);
       }
     }
-    setTouchStart(null); // Reset
+  };
+
+  const scrollToSlide = (index) => {
+    if (scrollRef.current) {
+      const slideWidth = scrollRef.current.offsetWidth;
+      scrollRef.current.scrollTo({
+        left: slideWidth * index,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+    setStartX(e.pageX - scrollRef.current.offsetLeft);
+    setScrollLeftStart(scrollRef.current.scrollLeft);
+    scrollRef.current.style.cursor = "grabbing";
+  };
+
+  const handleMouseLeaveOrUp = () => {
+    setIsDragging(false);
+    if (scrollRef.current) {
+      scrollRef.current.style.cursor = "grab";
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging || !scrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5; // Drag speed multiplier
+    scrollRef.current.scrollLeft = scrollLeftStart - walk;
   };
 
   return (
     <div
-      style={{ width: 328, height: 328, position: 'relative', overflow: 'hidden' }}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
+      style={{ width: 328, height: 328, position: "relative", cursor: "grab" }}
     >
-      {slides[activeSlide]}
-      <div style={{
-        position: 'absolute',
-        bottom: 17,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        display: 'flex',
-        gap: 8
-      }}>
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        onMouseDown={handleMouseDown}
+        onMouseLeave={handleMouseLeaveOrUp}
+        onMouseUp={handleMouseLeaveOrUp}
+        onMouseMove={handleMouseMove}
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          overflowX: "auto",
+          scrollSnapType: "x mandatory",
+          scrollBehavior: "smooth",
+          touchAction: "pan-x",
+          WebkitOverflowScrolling: "touch",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+        }}
+      >
+        {slides.map((slide, index) => (
+          <div
+            key={index}
+            style={{
+              width: "100%",
+              flexShrink: 0,
+              scrollSnapAlign: "center",
+              scrollSnapStop: "always",
+            }}
+          >
+            {slide}
+          </div>
+        ))}
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          bottom: 17,
+          left: "50%",
+          transform: "translateX(-50%)",
+          display: "flex",
+          gap: 8,
+          zIndex: 1, // Ensure indicator is above the slides
+        }}
+      >
         <div
-          onClick={() => setActiveSlide(0)}
-          style={{width: 8, height: 8, background: activeSlide === 0 ? '#FF8C42' : '#C4C4C6', borderRadius: 9999, cursor: 'pointer'}}
+          onClick={() => scrollToSlide(0)}
+          style={{
+            width: 8,
+            height: 8,
+            background: activeSlide === 0 ? "#FF8C42" : "#C4C4C6",
+            borderRadius: 9999,
+            cursor: "pointer",
+          }}
         />
         <div
-          onClick={() => setActiveSlide(1)}
-          style={{width: 8, height: 8, background: activeSlide === 1 ? '#FF8C42' : '#C4C4C6', borderRadius: 9999, cursor: 'pointer'}}
+          onClick={() => scrollToSlide(1)}
+          style={{
+            width: 8,
+            height: 8,
+            background: activeSlide === 1 ? "#FF8C42" : "#C4C4C6",
+            borderRadius: 9999,
+            cursor: "pointer",
+          }}
         />
       </div>
     </div>
@@ -190,21 +281,34 @@ export default function FinishRunningPage() {
         <ImageCarousel />
 
         {/* 버튼 영역 */}
-        <div style={{
-          alignSelf: 'center',
-          width: 206,
-          paddingLeft: 12,
-          paddingRight: 12,
-          paddingTop: 10,
-          paddingBottom: 10,
-          background: 'var(--main, #FF8C42)',
-          borderRadius: 30,
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: 9.60,
-          display: 'inline-flex'
-        }}>
-          <div style={{textAlign: 'center', color: '#FCFCFC', fontSize: 15, fontFamily: 'Pretendard', fontWeight: '700', wordWrap: 'break-word'}}>공유하기</div>
+        <div
+          style={{
+            alignSelf: "center",
+            width: 206,
+            paddingLeft: 12,
+            paddingRight: 12,
+            paddingTop: 10,
+            paddingBottom: 10,
+            background: "var(--main, #FF8C42)",
+            borderRadius: 30,
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 9.6,
+            display: "inline-flex",
+          }}
+        >
+          <div
+            style={{
+              textAlign: "center",
+              color: "#FCFCFC",
+              fontSize: 15,
+              fontFamily: "Pretendard",
+              fontWeight: "700",
+              wordWrap: "break-word",
+            }}
+          >
+            공유하기
+          </div>
         </div>
       </div>
 
