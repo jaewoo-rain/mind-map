@@ -11,6 +11,7 @@ import MissionCertificate from "./page/MissionCertificatePage";
 import OnboardingFlow from "./page/onboarding/OnboardingFlow";
 import StoryRepliesRoute from "./page/Camera/StoryRepliesRoute";
 import RunningPage from "./page/RunningPage.jsx";
+import StoryFeedPage from "./page/Camera/StoryFeedPage.jsx";
 
 // 홈: 1열 리스트 버튼
 function Home() {
@@ -104,11 +105,11 @@ function Home() {
             달리기 종료
           </button>
 
-          <button style={btn} onClick={() => navigate("/notifications")}>
+          <button style={btn} onClick={() => navigate("/story-feed")}>
             <span style={emoji} aria-hidden>
               🔔
             </span>
-            알림
+            스토리피드
           </button>
 
           <button style={btn} onClick={() => navigate("/gps")}>
@@ -162,6 +163,7 @@ export default function App() {
       <Route path="/notifications" element={<NotificationsPage />} />
       <Route path="/gps" element={<GpsPage />} />
       <Route path="/finish_run" element={<FinishRunningPage />} />
+      <Route path="/story-feed" element={<StoryFeedPage />} />
       <Route path="/onboard" element={<OnboardingFlow />} />
       <Route path="/mission" element={<MissionCertificate />} />
       <Route path="/run" element={<RunningPage />} />
