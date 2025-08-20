@@ -1,25 +1,38 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-export default function RegionSelectPage({
-  defaultRegion = null, // 선택 유지용(옵션): '동부' | '서부' | '남부' | '북부'
+const AGE_OPTIONS = ["10대", "20대", "30대", "40대", "50대 이상"];
+
+/**
+ * 디자인 스펙
+ * - 리스트형 옵션(선택됨: #FFF4EC 배경 + #FF8C42 테두리, 텍스트 #2A292E)
+ * - 비선택: 흰색 배경 + #C4C4C6 테두리/텍스트
+ * - 상단 뒤로가기, 하단 풀폭 "다음" 버튼
+ *
+ * props:
+ *  - defaultAgeGroup?: string | null
+ *  - onBack?: () => void
+ *  - onNext: (ageGroup: string) => void
+ */
+export default function AgeSelectPage({
+  defaultAgeGroup = null,
   onBack,
   onNext,
 }) {
-  const [region, setRegion] = useState(defaultRegion);
+  const [age, setAge] = useState(defaultAgeGroup);
+  const canProceed = useMemo(() => !!age, [age]);
 
-  const canProceed = useMemo(() => !!region, [region]);
-
-  // Enter로 진행
+  // Enter 키로 진행
   useEffect(() => {
     const handler = (e) => {
-      if (e.key === "Enter" && canProceed) handleNext();
+      if (e.key === "Enter" && canProceed) submit();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [canProceed, region]);
+  }, [canProceed, age]);
 
-  const handleNext = () => {
-    if (region && onNext) onNext(region);
+  const submit = () => {
+    if (!canProceed) return;
+    onNext && onNext(age);
   };
 
   const handleBack = () => {
@@ -27,9 +40,7 @@ export default function RegionSelectPage({
     else if (window.history?.length > 0) window.history.back();
   };
 
-  const regionList = ["동부", "서부", "남부", "북부"];
-
-  const listItemStyle = (selected) => ({
+  const optionStyle = (selected) => ({
     width: "100%",
     height: 60,
     padding: "14px 16px",
@@ -45,7 +56,7 @@ export default function RegionSelectPage({
     transition: "background 120ms ease, outline-color 120ms ease",
   });
 
-  const listTextStyle = (selected) => ({
+  const textStyle = (selected) => ({
     width: 311,
     display: "flex",
     flexDirection: "column",
@@ -68,7 +79,7 @@ export default function RegionSelectPage({
         margin: "0 auto",
       }}
     >
-      {/* 상단 상태바(간단) */}
+      {/* 상태바(간단) */}
       <div
         style={{
           width: 376,
@@ -128,53 +139,26 @@ export default function RegionSelectPage({
       <div
         style={{
           left: 18,
-          top: 120,
+          top: 118,
           position: "absolute",
           color: "#1E1E22",
           fontSize: 30,
           fontFamily: "Pretendard",
           fontWeight: 500,
-          lineHeight: "30px",
+          lineHeight: "34.5px",
         }}
       >
-        제주에서 러닝하실 지역은?
+        러너님의 나이는?
       </div>
 
-      {/* 지도 + 핀 */}
-      <div
-        style={{
-          width: 339,
-          height: 218,
-          left: 18,
-          top: 167,
-          position: "absolute",
-          overflow: "hidden",
-        }}
-      >
-        <img
-          src="/jeju.png"
-          alt="제주 지도"
-          style={{
-            width: 280,
-            height: 167,
-            position: "absolute",
-            left: 30,
-            top: 22,
-            objectFit: "cover",
-            // 디자인엔 녹색 박스였지만 실제 이미지를 쓰므로 테두리만 남길 수도 있어요:
-            // outline: "1px #5D9C55 solid",
-          }}
-        />
-      </div>
-
-      {/* 리스트(동/서/남/북) */}
+      {/* 옵션 리스트 */}
       <div
         role="radiogroup"
-        aria-label="지역 선택"
+        aria-label="나이 선택"
         style={{
           width: 343,
           left: 18,
-          top: 405,
+          top: 180,
           position: "absolute",
           display: "inline-flex",
           flexDirection: "column",
@@ -182,18 +166,18 @@ export default function RegionSelectPage({
           gap: 14,
         }}
       >
-        {regionList.map((r) => {
-          const selected = region === r;
+        {AGE_OPTIONS.map((label) => {
+          const selected = age === label;
           return (
             <button
-              key={r}
+              key={label}
               type="button"
               role="radio"
               aria-checked={selected}
-              onClick={() => setRegion(r)}
-              style={listItemStyle(selected)}
+              onClick={() => setAge(label)}
+              style={optionStyle(selected)}
             >
-              <div style={listTextStyle(selected)}>{r}</div>
+              <div style={textStyle(selected)}>{label}</div>
             </button>
           );
         })}
@@ -210,8 +194,7 @@ export default function RegionSelectPage({
         }}
       >
         <button
-          type="button"
-          onClick={handleNext}
+          onClick={submit}
           disabled={!canProceed}
           style={{
             width: "100%",
@@ -219,8 +202,8 @@ export default function RegionSelectPage({
             borderRadius: 6,
             border: "none",
             display: "inline-flex",
-            alignItems: "center",
             justifyContent: "center",
+            alignItems: "center",
             background: canProceed ? "#FF8C42" : "#E4E4E7",
             color: canProceed ? "#FCFCFC" : "#9CA3AF",
             fontSize: 16,

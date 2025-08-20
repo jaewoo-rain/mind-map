@@ -1,97 +1,47 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect } from "react";
 
 /**
- * 온보딩 마지막 로딩 페이지 (conic-gradient 도넛 프로그레스바)
- * - 1~2초 사이(기본 랜덤) 동안 진행률 애니메이션
- * - 동시에 서버로 프로필 저장/조회
- * - 둘 다 끝나면 /recommend 로 이동
+ * 추천코스 생성 로딩 화면
+ * - 2초 회전 후 recommendPath로 이동
+ * - API 호출은 아래 useEffect 내부 주석 위치에 추가하면 됨
  */
 export default function FinalizingPage({
-  nickname = "러너님",
-  profile = {},
-  durationMs = null, // null이면 1000~2000ms 랜덤
-  saveUrl = "/api/onboarding/complete",
   recommendPath = "/recommend",
-  onComplete, // (data) => void
+  durationMs = 2000,
+  // 필요 시 전달할 데이터가 있다면 props로 넘겨서 fetch body에 사용하세요.
+  // profile,
+  // saveUrl = "/api/onboarding/complete",
+  // onComplete,
 }) {
-  const [progress, setProgress] = useState(0);
-  const startRef = useRef(null);
-  const doneAnimRef = useRef(false);
-  const doneServerRef = useRef(false);
-  const rafRef = useRef(null);
-
-  const DURATION = useMemo(
-    () =>
-      typeof durationMs === "number"
-        ? durationMs
-        : Math.floor(1000 + Math.random() * 1000),
-    [durationMs]
-  );
-
-  // 진행률 애니메이션
-  useEffect(() => {
-    const step = (ts) => {
-      if (!startRef.current) startRef.current = ts;
-      const elapsed = ts - startRef.current;
-      const pct = Math.min(100, (elapsed / DURATION) * 100);
-      setProgress(pct);
-
-      if (pct >= 100) {
-        doneAnimRef.current = true;
-        maybeFinish();
-        return;
-      }
-      rafRef.current = requestAnimationFrame(step);
-    };
-
-    rafRef.current = requestAnimationFrame(step);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [DURATION]);
-
-  // 서버 통신 (저장/조회)
   useEffect(() => {
     let cancelled = false;
 
-    const saveAndFetch = async () => {
-      try {
-        // const res = await fetch(saveUrl, {
-        //   method: "POST",
-        //   headers: { "Content-Type": "application/json" },
-        //   body: JSON.stringify({ profile }),
-        // });
-        // const data = await res.json().catch(() => null);
-        // if (!cancelled && onComplete) onComplete(data);
-      } catch (e) {
-        console.warn("onboarding finalize error:", e);
-      } finally {
-        if (!cancelled) {
-          doneServerRef.current = true;
-          maybeFinish();
-        }
-      }
-    };
+    // ⬇️ API 호출 자리 (예시) — 주석 해제 후 사용
+    // const api = (async () => {
+    //   try {
+    //     const res = await fetch(saveUrl, {
+    //       method: "POST",
+    //       headers: { "Content-Type": "application/json" },
+    //       body: JSON.stringify({ profile }),
+    //     });
+    //     const data = await res.json().catch(() => null);
+    //     if (!cancelled && onComplete) onComplete(data);
+    //   } catch (e) {
+    //     console.warn("finalizing error:", e);
+    //   }
+    // })();
 
-    saveAndFetch();
+    const delay = new Promise((r) => setTimeout(r, durationMs));
+
+    // 지금은 API가 없으니 delay만 기다렸다가 이동
+    Promise.allSettled([delay /*, api*/]).then(() => {
+      if (!cancelled) window.location.href = recommendPath;
+    });
+
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saveUrl, JSON.stringify(profile)]);
-
-  // 애니메이션 + 서버 모두 끝나면 이동
-  const maybeFinish = () => {
-    if (doneAnimRef.current && doneServerRef.current) {
-      window.location.href = recommendPath;
-    }
-  };
-
-  // 도넛 프로그레스바 사이즈/두께
-  const size = 150;
-  const stroke = 12; // 도넛 두께
-  const angle = (progress / 100) * 360;
+  }, [durationMs, recommendPath /*, saveUrl, profile, onComplete*/]);
 
   return (
     <div
@@ -101,130 +51,139 @@ export default function FinalizingPage({
         position: "relative",
         background: "white",
         overflow: "hidden",
+        margin: "0 auto",
       }}
     >
-      {/* 제목 */}
+      {/* 간단 상태바(미리보기용) */}
       <div
         style={{
-          width: 360,
-          padding: 10,
-          left: 0,
-          top: 146,
+          width: 376,
+          height: 54,
+          left: -1,
+          top: 0,
+          position: "absolute",
+          background: "white",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            left: 48.68,
+            top: 18.34,
+            color: "black",
+            fontSize: 17,
+            fontFamily: "SF Pro",
+            fontWeight: 590,
+            lineHeight: "22px",
+          }}
+        >
+          9:41
+        </div>
+      </div>
+
+      {/* 타이틀/서브타이틀 */}
+      <div
+        style={{
+          width: 323,
+          left: 18,
+          top: 183,
           position: "absolute",
           display: "inline-flex",
-          justifyContent: "center",
+          flexDirection: "column",
           alignItems: "center",
+          gap: 14,
         }}
       >
         <div
           style={{
             textAlign: "center",
-            color: "black",
-            fontSize: 24,
+            color: "#1E1E22",
+            fontSize: 30,
             fontFamily: "Pretendard",
-            fontWeight: 700,
+            fontWeight: 500,
+            lineHeight: "34.5px",
           }}
         >
-          {nickname}에게 딱 좋은 코스를 생각중
+          추천코스를 생성중입니다!
+        </div>
+        <div
+          style={{
+            textAlign: "center",
+            color: "#1E1E22",
+            fontSize: 22,
+            fontFamily: "Pretendard",
+            fontWeight: 500,
+          }}
+        >
+          잠시만 기다려주세요.
         </div>
       </div>
 
-      {/* 도넛 프로그레스바 (conic-gradient) */}
+      {/* 회전 스피너 */}
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
       <div
         style={{
-          width: size,
-          height: size,
+          width: 150,
+          height: 150,
           left: 105,
-          top: 243,
+          top: 325,
+          position: "absolute",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {/* 바탕 도넛 */}
+        <div
+          style={{
+            position: "absolute",
+            width: 150,
+            height: 150,
+            borderRadius: "50%",
+            border: "12px solid #C4C4C6",
+            opacity: 1,
+          }}
+        />
+        {/* 주황 아크(상단 한쪽만 주황) + 회전 */}
+        <div
+          style={{
+            position: "absolute",
+            width: 150,
+            height: 150,
+            borderRadius: "50%",
+            border: "12px solid transparent",
+            borderTopColor: "#FF8C42",
+            animation: "spin 1.1s linear infinite",
+          }}
+        />
+      </div>
+
+      {/* 하단 홈 인디케이터(미리보기) */}
+      <div
+        style={{
+          width: 360,
+          height: 24,
+          left: 0,
+          bottom: 0,
           position: "absolute",
         }}
       >
         <div
           style={{
-            position: "relative",
-            width: "100%",
-            height: "100%",
-            borderRadius: "50%",
-            // 진행색(#1E1E22) -> 나머지 트랙(#E5E7EB)
-            background: `conic-gradient(#1E1E22 ${angle}deg, #E5E7EB ${angle}deg)`,
-            transition: "background 60ms linear",
-            willChange: "background",
-            // 살짝 입체감
-            boxShadow:
-              "0 2px 10px rgba(0,0,0,0.06), inset 0 2px 6px rgba(0,0,0,0.04)",
+            width: 128.96,
+            height: 4.48,
+            left: 116,
+            top: 16.84,
+            position: "absolute",
+            background: "black",
+            borderRadius: 90,
+            opacity: 0.9,
           }}
-        >
-          {/* 안쪽 비워서 도넛 형태 만들기 */}
-          <div
-            style={{
-              position: "absolute",
-              inset: stroke,
-              background: "white",
-              borderRadius: "50%",
-              boxShadow: "inset 0 2px 8px rgba(0,0,0,0.04)",
-            }}
-          />
-          {/* 가운데 퍼센트 */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontFamily: "Pretendard",
-              fontWeight: 700,
-              fontSize: 18,
-              color: "#1E1E22",
-            }}
-          >
-            {Math.round(progress)}%
-          </div>
-          {/* 은은한 하이라이트(시각적 포인트) */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              borderRadius: "50%",
-              background:
-                "radial-gradient(closest-side, rgba(255,255,255,0.35), transparent 70%)",
-              pointerEvents: "none",
-            }}
-          />
-        </div>
-      </div>
-
-      {/* 하단 임티 영역(플레이스홀더) */}
-      <div
-        style={{
-          width: 360,
-          height: 126,
-          left: 0,
-          top: 441,
-          position: "absolute",
-          background: "#F3F4F6",
-          borderRadius: 8,
-        }}
-      />
-      <div
-        style={{
-          left: 68,
-          top: 482,
-          position: "absolute",
-          textAlign: "center",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          color: "black",
-          fontSize: 16,
-          fontFamily: "Pretendard",
-          fontWeight: 400,
-        }}
-      >
-        임티 나열
-        <br />
-        <br />
-        임티 캐릭터 - 귤, 돌하르방, 바람?
+        />
       </div>
     </div>
   );

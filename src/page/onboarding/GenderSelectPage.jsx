@@ -1,25 +1,26 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-export default function RegionSelectPage({
-  defaultRegion = null, // 선택 유지용(옵션): '동부' | '서부' | '남부' | '북부'
+export default function GenderSelectPage({
+  defaultGender = null, // 'male' | 'female'
+  defaultAgeGroup = null, // 유지 전달용
   onBack,
   onNext,
 }) {
-  const [region, setRegion] = useState(defaultRegion);
-
-  const canProceed = useMemo(() => !!region, [region]);
+  const [gender, setGender] = useState(defaultGender);
+  const canProceed = useMemo(() => !!gender, [gender]);
 
   // Enter로 진행
   useEffect(() => {
     const handler = (e) => {
-      if (e.key === "Enter" && canProceed) handleNext();
+      if (e.key === "Enter" && canProceed) submit();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [canProceed, region]);
+  }, [canProceed]);
 
-  const handleNext = () => {
-    if (region && onNext) onNext(region);
+  const submit = () => {
+    if (!canProceed) return;
+    onNext && onNext(gender, defaultAgeGroup ?? null);
   };
 
   const handleBack = () => {
@@ -27,9 +28,7 @@ export default function RegionSelectPage({
     else if (window.history?.length > 0) window.history.back();
   };
 
-  const regionList = ["동부", "서부", "남부", "북부"];
-
-  const listItemStyle = (selected) => ({
+  const optionStyle = (selected) => ({
     width: "100%",
     height: 60,
     padding: "14px 16px",
@@ -37,19 +36,15 @@ export default function RegionSelectPage({
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "flex-start",
+    border: "none",
+    cursor: "pointer",
     background: selected ? "#FFF4EC" : "#FFFFFF",
     outline: selected ? "1px var(--main, #FF8C42) solid" : "1px #C4C4C6 solid",
     outlineOffset: -1,
-    border: "none",
-    cursor: "pointer",
     transition: "background 120ms ease, outline-color 120ms ease",
   });
 
-  const listTextStyle = (selected) => ({
-    width: 311,
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
+  const optionTextStyle = (selected) => ({
     color: selected ? "#2A292E" : "#C4C4C6",
     fontSize: 16,
     fontFamily: "Pretendard",
@@ -68,7 +63,7 @@ export default function RegionSelectPage({
         margin: "0 auto",
       }}
     >
-      {/* 상단 상태바(간단) */}
+      {/* 상단 상태바 (간략) */}
       <div
         style={{
           width: 376,
@@ -128,53 +123,26 @@ export default function RegionSelectPage({
       <div
         style={{
           left: 18,
-          top: 120,
+          top: 118,
           position: "absolute",
           color: "#1E1E22",
           fontSize: 30,
           fontFamily: "Pretendard",
           fontWeight: 500,
-          lineHeight: "30px",
+          lineHeight: "34.5px",
         }}
       >
-        제주에서 러닝하실 지역은?
+        러너님의 성별은?
       </div>
 
-      {/* 지도 + 핀 */}
-      <div
-        style={{
-          width: 339,
-          height: 218,
-          left: 18,
-          top: 167,
-          position: "absolute",
-          overflow: "hidden",
-        }}
-      >
-        <img
-          src="/jeju.png"
-          alt="제주 지도"
-          style={{
-            width: 280,
-            height: 167,
-            position: "absolute",
-            left: 30,
-            top: 22,
-            objectFit: "cover",
-            // 디자인엔 녹색 박스였지만 실제 이미지를 쓰므로 테두리만 남길 수도 있어요:
-            // outline: "1px #5D9C55 solid",
-          }}
-        />
-      </div>
-
-      {/* 리스트(동/서/남/북) */}
+      {/* 성별 옵션 */}
       <div
         role="radiogroup"
-        aria-label="지역 선택"
+        aria-label="성별 선택"
         style={{
           width: 343,
           left: 18,
-          top: 405,
+          top: 180,
           position: "absolute",
           display: "inline-flex",
           flexDirection: "column",
@@ -182,24 +150,30 @@ export default function RegionSelectPage({
           gap: 14,
         }}
       >
-        {regionList.map((r) => {
-          const selected = region === r;
-          return (
-            <button
-              key={r}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              onClick={() => setRegion(r)}
-              style={listItemStyle(selected)}
-            >
-              <div style={listTextStyle(selected)}>{r}</div>
-            </button>
-          );
-        })}
+        {/* 남자 */}
+        <button
+          type="button"
+          role="radio"
+          aria-checked={gender === "male"}
+          onClick={() => setGender("male")}
+          style={optionStyle(gender === "male")}
+        >
+          <span style={optionTextStyle(gender === "male")}>남자</span>
+        </button>
+
+        {/* 여자 */}
+        <button
+          type="button"
+          role="radio"
+          aria-checked={gender === "female"}
+          onClick={() => setGender("female")}
+          style={optionStyle(gender === "female")}
+        >
+          <span style={optionTextStyle(gender === "female")}>여자</span>
+        </button>
       </div>
 
-      {/* 하단 CTA */}
+      {/* 하단 CTA 버튼 */}
       <div
         style={{
           position: "absolute",
@@ -211,17 +185,17 @@ export default function RegionSelectPage({
       >
         <button
           type="button"
-          onClick={handleNext}
           disabled={!canProceed}
+          onClick={submit}
           style={{
             width: "100%",
             height: 54,
+            background: canProceed ? "#FF8C42" : "#E4E4E7",
             borderRadius: 6,
             border: "none",
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            background: canProceed ? "#FF8C42" : "#E4E4E7",
             color: canProceed ? "#FCFCFC" : "#9CA3AF",
             fontSize: 16,
             fontFamily: "Pretendard",
@@ -247,10 +221,10 @@ export default function RegionSelectPage({
       >
         <div
           style={{
-            width: 129,
-            height: 4.5,
+            width: 128.96,
+            height: 4.48,
             left: 123,
-            top: 16.8,
+            top: 16.84,
             position: "absolute",
             background: "black",
             borderRadius: 90,

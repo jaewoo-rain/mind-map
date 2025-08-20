@@ -66,7 +66,7 @@ import { VitePWA } from "vite-plugin-pwa";
 
 const TUNNEL_HOST =
   process.env.CF_TUNNEL_HOST ||
-  "placed-observation-believe-id.trycloudflare.com";
+  "mandate-horrible-ago-september.trycloudflare.com";
 
 export default defineConfig(({ mode }) => {
   loadEnv(mode, process.cwd(), ""); // 프론트 번들에 노출될 값은 VITE_ 접두사만
