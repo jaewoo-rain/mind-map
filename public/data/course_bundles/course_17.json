@@ -2,10 +2,30 @@
   "course": "17",
   "generated_at": "2025-08-18T18:55:20.532934Z",
   "counts": {
-    "segments": 7,
-    "lines": 7,
-    "spots": 10,
-    "guide_points": 8
+    "specific-course": 3
+  },
+  "specific-course": {
+    "0" : {
+      "_comment": "이호테우 -> 어영소공원",
+      "title" : "해안코스",
+      "description" : "열심히 달려봐요.",
+      "start" : "3",
+      "end" : "5",
+      "spots" : [
+        {
+          "name" : "이호테우 하얀말등대",
+          "lat" : 33.50330046147314,
+          "lng" : 126.45294626089029,
+          "src" : []
+        },
+        {
+          "name" : "도두봉",
+          "lat" : 33.50790276327279,
+          "lng" : 126.46840983849837,
+          "src" : []
+        }
+      ]
+    }
   },
   "lines": [
     [
